@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 export function LogoMark({ className = 'wordmark-mark' }: { className?: string }) {
   return (
@@ -10,44 +10,36 @@ export function LogoMark({ className = 'wordmark-mark' }: { className?: string }
       >
         {/* Fountain pen nib */}
         <path
-          d="M13 18.5L8.5 20.5L9.5 16L17.5 4.5C18.2 3.5 19.5 3.5 20.2 4.2C20.9 4.9 20.9 6.2 19.9 6.9L13 18.5Z"
+          d="M13.2 18.2L8.5 20.2L9.6 15.5L17.2 4.2C17.9 3.2 19.3 3.2 20.1 4C20.9 4.8 20.9 6.2 19.9 6.9L13.2 18.2Z"
           stroke="currentColor"
-          strokeWidth="1.5"
+          strokeWidth="1.75"
           strokeLinecap="round"
           strokeLinejoin="round"
         />
         <path
-          d="M9.5 16L13.5 17.5"
+          d="M9.6 15.5L13.6 17.2"
           stroke="currentColor"
-          strokeWidth="1.3"
+          strokeWidth="1.5"
           strokeLinecap="round"
         />
+        <circle cx="13.2" cy="12.2" r="0.9" fill="currentColor" />
         <path
-          d="M16 8L18.8 10"
+          d="M13.2 12.2L8.8 19.2"
           stroke="currentColor"
-          strokeWidth="1.3"
-          strokeLinecap="round"
-        />
-        <circle cx="13.2" cy="12.5" r="0.8" fill="currentColor" />
-        <path
-          d="M13.2 12.5L9 19.5"
-          stroke="currentColor"
-          strokeWidth="1.2"
+          strokeWidth="1.4"
           strokeLinecap="round"
         />
 
         {/* 4-point sparkle star top-left */}
         <path
-          d="M5 8C5 6.2 4.2 5.5 2.5 5.5C4.2 5.5 5 4.8 5 3C5 4.8 5.8 5.5 7.5 5.5C5.8 5.5 5 6.2 5 8Z"
+          d="M5 8.5C5 6.5 4 5.5 2 5.5C4 5.5 5 4.5 5 2.5C5 4.5 6 5.5 8 5.5C6 5.5 5 6.5 5 8.5Z"
           fill="currentColor"
         />
         {/* Delicate star bottom-right */}
         <path
-          d="M21 18C21 16.8 20.4 16.2 19.2 16.2C20.4 16.2 21 15.6 21 14.4C21 15.6 21.6 16.2 22.8 16.2C21.6 16.2 21 16.8 21 18Z"
+          d="M21.5 17.5C21.5 16.2 20.8 15.5 19.5 15.5C20.8 15.5 21.5 14.8 21.5 13.5C21.5 14.8 22.2 15.5 23.5 15.5C22.2 15.5 21.5 16.2 21.5 17.5Z"
           fill="currentColor"
         />
-        {/* Tiny sparkle near bottom left */}
-        <circle cx="4" cy="14" r="0.6" fill="currentColor" />
       </svg>
     </span>
   );
