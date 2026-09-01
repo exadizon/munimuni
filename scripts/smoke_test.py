@@ -14,6 +14,10 @@ with sync_playwright() as playwright:
     calendar_panel = page.locator('.calendar-panel').bounding_box()
     saturday = page.locator('.weekday').last.bounding_box()
     assert calendar_panel and saturday and saturday['x'] + saturday['width'] < calendar_panel['x'] + calendar_panel['width'] - 8
+    previous_month = page.locator('.month-controls .small-button').nth(0).bounding_box()
+    next_month = page.locator('.month-controls .small-button').nth(1).bounding_box()
+    assert previous_month and next_month and next_month['x'] - (previous_month['x'] + previous_month['width']) >= 8
+    assert page.locator('html').evaluate("element => getComputedStyle(element).scrollbarWidth") == 'none'
 
     editor = page.locator('textarea.editor')
     editor.fill('A small test of keeping thoughts close.')
