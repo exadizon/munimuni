@@ -12,6 +12,8 @@ import {
 } from '@munimuni/core/journal';
 import { authClient } from './auth-client';
 import { exportEntries, listEntries, listPendingEntries, removePendingEntries, saveEntry } from './storage';
+import { LandingPage } from './LandingPage';
+import { LogoMark } from './Logo';
 
 type Appearance = 'system' | 'light' | 'dark';
 type Accent = 'neutral' | 'blue' | 'green' | 'amber' | 'rose' | 'violet';
@@ -171,7 +173,7 @@ function JournalApp({ userId }: { userId: string }) {
     <div className="app-shell">
       <header className="topbar">
         <button className="wordmark" onClick={() => selectDate(today)} aria-label="Go to today">
-          <span className="wordmark-mark">m</span> munimuni
+          <LogoMark /> munimuni
         </button>
         <div className="topbar-actions">
           <span className="sync-status"><span className={`status-dot ${saveState}`} />{saveState === 'saving' ? 'Saving locally' : syncState === 'syncing' ? 'Syncing securely' : syncState === 'offline' ? 'Saved locally' : syncState === 'pending' ? 'Waiting to sync' : 'Synced securely'}</span>
@@ -246,6 +248,26 @@ function JournalApp({ userId }: { userId: string }) {
           <SettingGroup label="Writing font"><div className="font-list">{(['serif', 'sans', 'mono'] as WritingFont[]).map((value) => <button className={`${writingFont === value ? 'active' : ''} font-${value}`} key={value} onClick={() => setWritingFont(value)}>{value === 'serif' ? 'A quiet classic' : value === 'sans' ? 'A clear modern' : 'A measured typewriter'}</button>)}</div></SettingGroup>
           <SettingGroup label="Writing size"><div className="size-list">{(['small', 'medium', 'large'] as WritingSize[]).map((value) => <button className={writingSize === value ? 'active' : ''} key={value} onClick={() => setWritingSize(value)}>{value[0].toUpperCase() + value.slice(1)}</button>)}</div></SettingGroup>
           <SettingGroup label="Data"><div className="export-list"><button onClick={() => downloadExport('markdown')}>Export Markdown <span>↗</span></button><button onClick={() => downloadExport('text')}>Export plain text <span>↗</span></button></div></SettingGroup>
+          <SettingGroup label="Account">
+            <div className="account-card">
+              <div className="account-status">
+                <div className="account-user-info">
+                  <span className="account-user-name">Personal Journal</span>
+                  <span className="account-sync-badge">
+                    <span className="status-dot saving" /> Cloud sync active
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="signout-button"
+                onClick={() => void authClient.signOut().then(() => window.location.assign('/'))}
+              >
+                <span>Log out</span>
+                <span>→</span>
+              </button>
+            </div>
+          </SettingGroup>
           <p className="settings-footnote">Your entries are saved on this device first, then synced securely when you’re signed in.</p>
         </aside>}
       </main>
@@ -264,7 +286,7 @@ function App() {
   const { data: session, isPending } = authClient.useSession();
 
   if (isPending) return <div className="auth-loading">Opening your journal…</div>;
-  if (!session?.user) return <AuthScreen />;
+  if (!session?.user) return <LandingPage />;
   return <AccountBootstrap userId={session.user.id} />;
 }
 
@@ -283,44 +305,179 @@ function AccountBootstrap({ userId }: { userId: string }) {
   return <JournalApp userId={userId} />;
 }
 
+type AuthMode = 'sign-in' | 'sign-up' | 'forgot-password';
+
+function PasswordField({
+  value,
+  onChange,
+  autoComplete,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  autoComplete: 'current-password' | 'new-password';
+}) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <span className="password-field">
+      <input
+        type={visible ? 'text' : 'password'}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        autoComplete={autoComplete}
+        minLength={12}
+        required
+      />
+      <button
+        type="button"
+        className="password-toggle"
+        onClick={() => setVisible((current) => !current)}
+        aria-label={visible ? 'Hide password' : 'Show password'}
+        aria-pressed={visible}
+      >
+        <svg aria-hidden="true" viewBox="0 0 24 24" focusable="false">
+          {visible ? <path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.1A10.8 10.8 0 0 1 12 4.8c5.2 0 8.7 4.8 9.7 7.2a14 14 0 0 1-3.2 4.4M6.3 6.3A14.8 14.8 0 0 0 2.3 12c1 2.4 4.5 7.2 9.7 7.2 1.1 0 2.2-.2 3.2-.6" /> : <><path d="M2.3 12C3.3 9.6 6.8 4.8 12 4.8s8.7 4.8 9.7 7.2c-1 2.4-4.5 7.2-9.7 7.2S3.3 14.4 2.3 12Z" /><circle cx="12" cy="12" r="2.5" /></>}
+        </svg>
+      </button>
+    </span>
+  );
+}
+
 export function AuthScreen({ initialMode = 'sign-in' }: { initialMode?: 'sign-in' | 'sign-up' }) {
-  const [mode, setMode] = useState(initialMode);
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
+    setMessage('');
     setSubmitting(true);
-    const result = mode === 'sign-in'
-      ? await authClient.signIn.email({ email, password, callbackURL: '/' })
-      : await authClient.signUp.email({ name: name.trim(), email, password, callbackURL: '/' });
-    setSubmitting(false);
-    if (result.error) {
-      setError(result.error.message ?? 'We could not complete that request.');
-      return;
+    try {
+      if (mode === 'forgot-password') {
+        const result = await authClient.requestPasswordReset({
+          email,
+          redirectTo: `${window.location.origin}/auth/reset-password`,
+        });
+        if (result.error) {
+          setError(result.error.message ?? 'We could not send a reset link.');
+          return;
+        }
+        setMessage('If an account exists for that email, a reset link is on its way.');
+        return;
+      }
+
+      const result = mode === 'sign-in'
+        ? await authClient.signIn.email({ email, password, callbackURL: '/' })
+        : await authClient.signUp.email({ name: name.trim(), email, password, callbackURL: '/' });
+      if (result.error) {
+        setError(result.error.message ?? 'We could not complete that request.');
+        return;
+      }
+      window.location.assign('/');
+    } catch {
+      setError('We could not complete that request. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
-    window.location.assign('/');
   };
 
   return (
     <main className="auth-screen">
       <div className="auth-card">
-        <div className="auth-brand"><span className="wordmark-mark">m</span><span>munimuni</span></div>
+        <div className="auth-brand"><LogoMark /><span>munimuni</span></div>
         <p className="eyebrow">A quiet place for your thoughts</p>
-        <h1>{mode === 'sign-in' ? 'Welcome back.' : 'Make space to begin.'}</h1>
-        <p className="auth-intro">Your journal stays yours. Sign in to carry it securely between your devices.</p>
+        <h1>{mode === 'sign-in' ? 'Welcome back.' : mode === 'sign-up' ? 'Make space to begin.' : 'Reset your password.'}</h1>
+        <p className="auth-intro">{mode === 'forgot-password' ? 'Enter your email and we’ll send a secure link if there’s an account for it.' : 'Your journal stays yours. Sign in to carry it securely between your devices.'}</p>
         <form onSubmit={submit} className="auth-form">
           {mode === 'sign-up' && <label>What should we call you?<input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" required maxLength={80} /></label>}
           <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>
-          <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'} minLength={12} required /><small>Use at least 12 characters.</small></label>
+          {mode !== 'forgot-password' && <label>Password<PasswordField value={password} onChange={setPassword} autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'} /><small>Use at least 12 characters.</small></label>}
           {error && <p className="form-error" role="alert">{error}</p>}
-          <button className="primary-button" disabled={submitting}>{submitting ? 'Opening…' : mode === 'sign-in' ? 'Sign in' : 'Create account'}</button>
+          {message && <p className="form-success" role="status">{message}</p>}
+          <button className="primary-button" disabled={submitting}>{submitting ? 'Working…' : mode === 'sign-in' ? 'Sign in' : mode === 'sign-up' ? 'Create account' : 'Email reset link'}</button>
         </form>
-        <button className="auth-switch" onClick={() => { setError(''); setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in'); }}>{mode === 'sign-in' ? 'New here? Create an account' : 'Already have an account? Sign in'}</button>
+        {mode === 'sign-in' && <button className="auth-switch auth-forgot" onClick={() => { setError(''); setMessage(''); setMode('forgot-password'); }}>Forgot password?</button>}
+        <button className="auth-switch" onClick={() => { setError(''); setMessage(''); setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in'); }}>{mode === 'forgot-password' ? 'Back to sign in' : mode === 'sign-in' ? 'New here? Create an account' : 'Already have an account? Sign in'}</button>
+      </div>
+    </main>
+  );
+}
+
+export function PasswordResetScreen() {
+  const [token, setToken] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setToken(new URLSearchParams(window.location.search).get('token'));
+  }, []);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError('');
+    setMessage('');
+    if (!token) {
+      setError('This reset link is missing or expired. Request a new one.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('The passwords do not match.');
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const result = await authClient.resetPassword({ newPassword, token });
+      if (result.error) {
+        setError(result.error.message ?? 'We could not reset your password.');
+        return;
+      }
+      setMessage('Your password has been updated. You can sign in now.');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch {
+      setError('We could not reset your password. Please request a new link.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (token === null) {
+    return (
+      <main className="auth-screen">
+        <div className="auth-card">
+          <div className="auth-brand"><LogoMark /><span>munimuni</span></div>
+          <p className="eyebrow">Password reset</p>
+          <h1>That link is no longer valid.</h1>
+          <p className="auth-intro">Request another reset link from the sign-in page and we’ll get you back in.</p>
+          <button className="primary-button" onClick={() => window.location.assign('/auth/sign-in')}>Return to sign in</button>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="auth-screen">
+      <div className="auth-card">
+        <div className="auth-brand"><LogoMark /><span>munimuni</span></div>
+        <p className="eyebrow">Password reset</p>
+        <h1>Choose a new password.</h1>
+        <p className="auth-intro">Use at least 12 characters. This will replace your old password on every device.</p>
+        <form onSubmit={submit} className="auth-form">
+          <label>New password<PasswordField value={newPassword} onChange={setNewPassword} autoComplete="new-password" /></label>
+          <label>Confirm password<PasswordField value={confirmPassword} onChange={setConfirmPassword} autoComplete="new-password" /></label>
+          {error && <p className="form-error" role="alert">{error}</p>}
+          {message && <p className="form-success" role="status">{message}</p>}
+          <button className="primary-button" disabled={submitting}>{submitting ? 'Updating…' : 'Update password'}</button>
+        </form>
+        {message && <button className="auth-switch" onClick={() => window.location.assign('/auth/sign-in')}>Return to sign in</button>}
       </div>
     </main>
   );
@@ -354,7 +511,7 @@ function OnboardingScreen({ onComplete }: { onComplete: (profile: Profile) => vo
   return (
     <main className="auth-screen onboarding-screen">
       <div className="auth-card">
-        <div className="auth-brand"><span className="wordmark-mark">m</span><span>munimuni</span></div>
+        <div className="auth-brand"><LogoMark /><span>munimuni</span></div>
         <p className="eyebrow">Before your first page</p>
         <h1>Let’s make this yours.</h1>
         <p className="auth-intro">A couple of quiet details help Munimuni keep your dates right across devices.</p>

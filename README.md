@@ -14,10 +14,11 @@ The first runnable slice lives in `apps/web` and includes:
 - restrained accent colors, writing font, and writing size preferences
 - Markdown and plain text export
 - Neon Auth sign-in/sign-up with same-origin session cookies
+- password recovery with secure reset links
 - first-run onboarding for display name and time zone
 - durable local outbox with authenticated sync to Neon Postgres
 
-The shared journal model and date helpers live in `packages/core`. The web client is a Next.js PWA shell so Vercel can serve the editor and secure database routes in one deployment. IndexedDB remains the first write target; pending entries are replayed to Neon when the account is available. A later native client can reuse the core journal model and sync contract without moving plaintext through the browser bundle.
+The shared journal model and date helpers live in `packages/core`. The web client is an installable Next.js PWA shell so Vercel can serve the editor and secure database routes in one deployment. IndexedDB remains the first write target; pending entries are replayed to Neon when the account is available. A later native client can reuse the core journal model and sync contract without moving plaintext through the browser bundle.
 
 ## Run it
 
@@ -45,6 +46,8 @@ npm run db:migrate
 ```
 
 The production app must have `DATABASE_URL`, `NEON_AUTH_BASE_URL`, and `NEON_AUTH_COOKIE_SECRET` configured as server-only variables. Add each deployed Vercel domain to Neon Auth’s trusted domains before enabling sign-in there.
+
+On a phone, open the deployed HTTPS URL in the browser menu and choose **Add to Home Screen** or **Install app**. Desktop browsers expose the same install action in the address bar when the PWA is eligible.
 
 Run the core tests with:
 
