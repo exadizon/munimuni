@@ -3,6 +3,7 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   transpilePackages: ['@munimuni/core'],
   poweredByHeader: false,
+  ...(process.env.VERCEL ? { distDir: '../../.next' } : {}),
   async headers() {
     return [{
       source: '/(.*)',
