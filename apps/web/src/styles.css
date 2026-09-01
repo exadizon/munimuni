@@ -369,7 +369,7 @@
   flex-direction: column;
   justify-content: space-between;
   min-height: 230px;
-  transition: transform 0.2s ease, border-color 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .feature-card:hover {
@@ -378,7 +378,7 @@
 }
 
 .feature-icon {
-  font-size: 20px;
+  font-size: 22px;
   color: var(--accent);
   margin-bottom: 16px;
 }
@@ -391,21 +391,47 @@
 
 .feature-card p {
   font: 14px/1.65 'DM Sans', sans-serif;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--ink) 82%, var(--muted));
   margin: 0 0 20px;
   flex-grow: 1;
 }
 
 .feature-tag {
-  font: 9px 'DM Mono', monospace;
+  display: inline-flex;
+  align-items: center;
+  font: 500 10px/1 'DM Mono', monospace;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   color: var(--accent);
   align-self: flex-start;
-  padding: 3px 8px;
-  border: 1px solid var(--accent-soft);
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--accent-soft) 40%, transparent);
+  padding: 6px 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--faint));
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 12%, var(--panel));
+}
+
+:root[data-appearance='dark'] .feature-card,
+:root[data-appearance='dark'] .sync-step-card,
+:root[data-appearance='dark'] .type-spec-card {
+  background: #1c221e;
+  border-color: #384239;
+}
+
+:root[data-appearance='dark'] .feature-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+:root[data-appearance='dark'] .feature-tag {
+  color: color-mix(in srgb, var(--accent) 92%, #ffffff);
+  border-color: color-mix(in srgb, var(--accent) 42%, #424a43);
+  background: color-mix(in srgb, var(--accent) 16%, #161a17);
+}
+
+:root[data-appearance='dark'] .landing-pills .pill {
+  color: color-mix(in srgb, var(--ink) 85%, var(--muted));
+  border-color: #384239;
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
 }
 
 /* Sync Steps */
@@ -436,7 +462,7 @@
 
 .sync-step-card p {
   font: 13px/1.65 'DM Sans', sans-serif;
-  color: var(--muted);
+  color: color-mix(in srgb, var(--ink) 80%, var(--muted));
   margin: 0;
 }
 
