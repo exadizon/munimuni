@@ -113,7 +113,7 @@ export function LandingPage({ initialAuthMode = 'sign-in' }: { initialAuthMode?:
             <div className="landing-hero-cta-row">
               <button
                 type="button"
-                className="primary-button landing-hero-primary"
+                className="landing-primary-button"
                 onClick={() => scrollToSection('auth')}
               >
                 Create your journal <span>→</span>
@@ -512,7 +512,7 @@ export function LandingPage({ initialAuthMode = 'sign-in' }: { initialAuthMode?:
           <div className="banner-actions">
             <button
               type="button"
-              className="primary-button"
+              className="landing-primary-button"
               onClick={() => {
                 scrollToSection('auth');
                 const emailInput = document.querySelector('input[type="email"]') as HTMLInputElement | null;
