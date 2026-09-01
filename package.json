@@ -11,7 +11,9 @@
     "dev": "npm --workspace @munimuni/web run dev",
     "build": "npm --workspace @munimuni/web run build",
     "test": "npm --workspace @munimuni/core run test",
-    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs"
+    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
+    "dev:desktop": "npm --workspace @munimuni/desktop run tauri dev",
+    "build:desktop": "npm --workspace @munimuni/desktop run tauri build"
   },
   "dependencies": {
     "@neon/config": "^1.1.0",

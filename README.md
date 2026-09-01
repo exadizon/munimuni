@@ -52,6 +52,23 @@ Run the core tests with:
 npm test
 ```
 
+
+## Desktop app
+
+A native desktop implementation now lives in `apps/desktop` (Tauri + React). It mirrors the web journaling experience while keeping local-first persistence and desktop-native export dialogs.
+
+Run it with:
+
+```sh
+npm run dev:desktop
+```
+
+Build desktop binaries with:
+
+```sh
+npm run build:desktop
+```
+
 ## Architecture direction
 
 The data model uses stable IDs, timestamps, soft-delete metadata, and a version field. The browser writes to IndexedDB and an outbox first, then the authenticated server route applies per-user, per-day last-write-wins merging in Neon Postgres. Server routes never accept a user ID from the client: ownership comes from the Neon Auth session. Cross-origin state-changing requests are rejected, payloads are bounded and validated, and baseline security headers are applied by Next.js.
