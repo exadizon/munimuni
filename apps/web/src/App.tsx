@@ -12,6 +12,7 @@ import {
 } from '@munimuni/core/journal';
 import { authClient } from './auth-client';
 import { exportEntries, listEntries, listPendingEntries, removePendingEntries, saveEntry } from './storage';
+import { LandingPage } from './LandingPage';
 
 type Appearance = 'system' | 'light' | 'dark';
 type Accent = 'neutral' | 'blue' | 'green' | 'amber' | 'rose' | 'violet';
@@ -264,7 +265,7 @@ function App() {
   const { data: session, isPending } = authClient.useSession();
 
   if (isPending) return <div className="auth-loading">Opening your journal…</div>;
-  if (!session?.user) return <AuthScreen />;
+  if (!session?.user) return <LandingPage />;
   return <AccountBootstrap userId={session.user.id} />;
 }
 
