@@ -11,6 +11,9 @@ with sync_playwright() as playwright:
     page.goto(os.environ.get('MUNIMUNI_SMOKE_URL', 'http://localhost:4173'))
     page.wait_for_load_state('networkidle')
     print(f'body length: {len(page.locator("body").inner_text())}')
+    calendar_panel = page.locator('.calendar-panel').bounding_box()
+    saturday = page.locator('.weekday').last.bounding_box()
+    assert calendar_panel and saturday and saturday['x'] + saturday['width'] < calendar_panel['x'] + calendar_panel['width'] - 8
 
     editor = page.locator('textarea.editor')
     editor.fill('A small test of keeping thoughts close.')
