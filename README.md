@@ -13,8 +13,11 @@ The first runnable slice lives in `apps/web` and includes:
 - system/light/dark appearance modes
 - restrained accent colors, writing font, and writing size preferences
 - Markdown and plain text export
+- Neon Auth sign-in/sign-up with same-origin session cookies
+- first-run onboarding for display name and time zone
+- durable local outbox with authenticated sync to Neon Postgres
 
-The shared journal model and date helpers live in `packages/core`. Cloud accounts, PostgreSQL, SQLite adapters for native clients, and incremental sync are intentionally the next vertical slice; this client does not claim those features are implemented yet.
+The shared journal model and date helpers live in `packages/core`. The web client is a Next.js PWA shell so Vercel can serve the editor and secure database routes in one deployment. IndexedDB remains the first write target; pending entries are replayed to Neon when the account is available. A later native client can reuse the core journal model and sync contract without moving plaintext through the browser bundle.
 
 ## Run it
 
@@ -23,11 +26,25 @@ npm install
 npm run dev
 ```
 
-Open the local Vite URL in a browser. To build the app:
+Open the local Next.js URL in a browser. To build the app:
 
 ```sh
 npm run build
 ```
+
+After Neon Auth is enabled, pull the linked branch variables into `apps/web/.env.local`:
+
+```sh
+npx neon@latest env pull --file apps/web/.env.local
+```
+
+Set `NEON_AUTH_COOKIE_SECRET` locally and in every Vercel environment. It must be a stable secret of at least 32 characters. Apply the database schema with:
+
+```sh
+npm run db:migrate
+```
+
+The production app must have `DATABASE_URL`, `NEON_AUTH_BASE_URL`, and `NEON_AUTH_COOKIE_SECRET` configured as server-only variables. Add each deployed Vercel domain to Neon Auth’s trusted domains before enabling sign-in there.
 
 Run the core tests with:
 
@@ -37,4 +54,4 @@ npm test
 
 ## Architecture direction
 
-The data model already includes stable IDs, timestamps, soft-delete metadata, and a version field so a future outbox and push/pull sync layer can be added without changing the editor contract. The next planned package is a persistence adapter that can share the same model with a SQLite-backed Windows/mobile client.
+The data model uses stable IDs, timestamps, soft-delete metadata, and a version field. The browser writes to IndexedDB and an outbox first, then the authenticated server route applies per-user, per-day last-write-wins merging in Neon Postgres. Server routes never accept a user ID from the client: ownership comes from the Neon Auth session. Cross-origin state-changing requests are rejected, payloads are bounded and validated, and baseline security headers are applied by Next.js.

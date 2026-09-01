@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { JournalEntry } from '@munimuni/core/journal';
 import {
@@ -8,8 +10,8 @@ import {
   parseDateKey,
   toDateKey,
 } from '@munimuni/core/journal';
-import { exportEntries, listEntries, saveEntry } from './storage';
-import './styles.css';
+import { authClient } from './auth-client';
+import { exportEntries, listEntries, listPendingEntries, removePendingEntries, saveEntry } from './storage';
 
 type Appearance = 'system' | 'light' | 'dark';
 type Accent = 'neutral' | 'blue' | 'green' | 'amber' | 'rose' | 'violet';
@@ -30,7 +32,7 @@ const getStored = <T,>(key: string, fallback: T): T => {
 
 const saveSetting = (key: string, value: unknown) => localStorage.setItem(`munimuni.${key}`, JSON.stringify(value));
 
-function App() {
+function JournalApp({ userId }: { userId: string }) {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [selectedDate, setSelectedDate] = useState(today);
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
@@ -42,19 +44,50 @@ function App() {
   const [writingSize, setWritingSize] = useState<WritingSize>(() => getStored('size', 'medium'));
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  const [syncState, setSyncState] = useState<'offline' | 'syncing' | 'synced' | 'pending'>('syncing');
   const saveTimer = useRef<number | undefined>(undefined);
+  const syncTimer = useRef<number | undefined>(undefined);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
 
   const entryForDate = entries.find((entry) => entry.date === selectedDate && !entry.deletedAt);
 
+  const syncWithServer = async () => {
+    setSyncState('syncing');
+    try {
+      const pending = await listPendingEntries();
+      const response = await fetch('/api/sync', {
+        method: pending.length ? 'POST' : 'GET',
+        headers: pending.length ? { 'Content-Type': 'application/json' } : undefined,
+        body: pending.length ? JSON.stringify({ entries: pending }) : undefined,
+        credentials: 'same-origin',
+      });
+      if (!response.ok) throw new Error('Sync unavailable');
+      const payload = await response.json() as { entries: JournalEntry[] };
+      for (const entry of payload.entries) await saveEntry(entry, { queueSync: false });
+      setEntries((current) => {
+        const next = new Map(current.map((entry) => [entry.date, entry]));
+        for (const entry of payload.entries) next.set(entry.date, entry);
+        return [...next.values()];
+      });
+      await removePendingEntries(pending);
+      setSyncState('synced');
+    } catch {
+      setSyncState('offline');
+    }
+  };
+
   useEffect(() => {
+    let cancelled = false;
     listEntries().then((storedEntries) => {
+      if (cancelled) return;
       setEntries(storedEntries);
       const current = storedEntries.find((entry) => entry.date === today && !entry.deletedAt);
       setContent(current?.content ?? '');
       setSaveState('saved');
+      void syncWithServer();
     });
-  }, []);
+    return () => { cancelled = true; };
+  }, [userId]);
 
   useEffect(() => {
     if (saveState === 'loading') return;
@@ -68,6 +101,9 @@ function App() {
       await saveEntry(entry);
       setEntries((current) => [...current.filter((item) => item.date !== selectedDate), entry]);
       setSaveState('saved');
+      setSyncState('pending');
+      window.clearTimeout(syncTimer.current);
+      syncTimer.current = window.setTimeout(() => void syncWithServer(), 1_200);
     }, 700);
     return () => window.clearTimeout(saveTimer.current);
   }, [content, selectedDate]);
@@ -104,6 +140,9 @@ function App() {
       const updated = { ...current, content, updatedAt: new Date().toISOString(), version: current.version + 1 };
       void saveEntry(updated);
       setEntries((items) => [...items.filter((item) => item.date !== selectedDate), updated]);
+      setSyncState('pending');
+      window.clearTimeout(syncTimer.current);
+      syncTimer.current = window.setTimeout(() => void syncWithServer(), 1_200);
     }
     const next = entries.find((entry) => entry.date === date && !entry.deletedAt);
     setSelectedDate(date);
@@ -135,9 +174,9 @@ function App() {
           <span className="wordmark-mark">m</span> munimuni
         </button>
         <div className="topbar-actions">
-          <span className="sync-status"><span className={`status-dot ${saveState}`} />{saveState === 'saving' ? 'Saving locally' : 'Saved locally'}</span>
+          <span className="sync-status"><span className={`status-dot ${saveState}`} />{saveState === 'saving' ? 'Saving locally' : syncState === 'syncing' ? 'Syncing securely' : syncState === 'offline' ? 'Saved locally' : syncState === 'pending' ? 'Waiting to sync' : 'Synced securely'}</span>
           <button className="icon-button" onClick={() => setSettingsOpen((open) => !open)} aria-label="Open settings">☼</button>
-          <button className="avatar" aria-label="Account">M</button>
+          <button className="avatar" onClick={() => void authClient.signOut().then(() => window.location.assign('/'))} aria-label="Sign out">M</button>
         </div>
       </header>
 
@@ -207,7 +246,7 @@ function App() {
           <SettingGroup label="Writing font"><div className="font-list">{(['serif', 'sans', 'mono'] as WritingFont[]).map((value) => <button className={`${writingFont === value ? 'active' : ''} font-${value}`} key={value} onClick={() => setWritingFont(value)}>{value === 'serif' ? 'A quiet classic' : value === 'sans' ? 'A clear modern' : 'A measured typewriter'}</button>)}</div></SettingGroup>
           <SettingGroup label="Writing size"><div className="size-list">{(['small', 'medium', 'large'] as WritingSize[]).map((value) => <button className={writingSize === value ? 'active' : ''} key={value} onClick={() => setWritingSize(value)}>{value[0].toUpperCase() + value.slice(1)}</button>)}</div></SettingGroup>
           <SettingGroup label="Data"><div className="export-list"><button onClick={() => downloadExport('markdown')}>Export Markdown <span>↗</span></button><button onClick={() => downloadExport('text')}>Export plain text <span>↗</span></button></div></SettingGroup>
-          <p className="settings-footnote">Your entries are saved on this device first. Cloud sync will arrive in the next layer.</p>
+          <p className="settings-footnote">Your entries are saved on this device first, then synced securely when you’re signed in.</p>
         </aside>}
       </main>
       <nav className="mobile-nav"><button className={!calendarOpen ? 'active' : ''} onClick={() => { setCalendarOpen(false); selectDate(today); }}>Today</button><button className={calendarOpen ? 'active' : ''} onClick={() => setCalendarOpen(true)}>Calendar</button><button className={settingsOpen ? 'active' : ''} onClick={() => setSettingsOpen((open) => !open)}>Settings</button></nav>
@@ -217,6 +256,117 @@ function App() {
 
 function SettingGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return <section className="setting-group"><h3>{label}</h3>{children}</section>;
+}
+
+type Profile = { displayName: string; timezone: string; completedAt: string };
+
+function App() {
+  const { data: session, isPending } = authClient.useSession();
+
+  if (isPending) return <div className="auth-loading">Opening your journal…</div>;
+  if (!session?.user) return <AuthScreen />;
+  return <AccountBootstrap userId={session.user.id} />;
+}
+
+function AccountBootstrap({ userId }: { userId: string }) {
+  const [profile, setProfile] = useState<Profile | null | undefined>(undefined);
+
+  useEffect(() => {
+    fetch('/api/profile', { credentials: 'same-origin' })
+      .then((response) => response.ok ? response.json() : Promise.reject(new Error('Profile unavailable')))
+      .then((payload: { profile: Profile | null }) => setProfile(payload.profile))
+      .catch(() => setProfile(null));
+  }, [userId]);
+
+  if (profile === undefined) return <div className="auth-loading">Preparing your journal…</div>;
+  if (!profile) return <OnboardingScreen onComplete={setProfile} />;
+  return <JournalApp userId={userId} />;
+}
+
+export function AuthScreen({ initialMode = 'sign-in' }: { initialMode?: 'sign-in' | 'sign-up' }) {
+  const [mode, setMode] = useState(initialMode);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError('');
+    setSubmitting(true);
+    const result = mode === 'sign-in'
+      ? await authClient.signIn.email({ email, password, callbackURL: '/' })
+      : await authClient.signUp.email({ name: name.trim(), email, password, callbackURL: '/' });
+    setSubmitting(false);
+    if (result.error) {
+      setError(result.error.message ?? 'We could not complete that request.');
+      return;
+    }
+    window.location.assign('/');
+  };
+
+  return (
+    <main className="auth-screen">
+      <div className="auth-card">
+        <div className="auth-brand"><span className="wordmark-mark">m</span><span>munimuni</span></div>
+        <p className="eyebrow">A quiet place for your thoughts</p>
+        <h1>{mode === 'sign-in' ? 'Welcome back.' : 'Make space to begin.'}</h1>
+        <p className="auth-intro">Your journal stays yours. Sign in to carry it securely between your devices.</p>
+        <form onSubmit={submit} className="auth-form">
+          {mode === 'sign-up' && <label>What should we call you?<input value={name} onChange={(event) => setName(event.target.value)} autoComplete="name" required maxLength={80} /></label>}
+          <label>Email<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" required /></label>
+          <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === 'sign-in' ? 'current-password' : 'new-password'} minLength={12} required /><small>Use at least 12 characters.</small></label>
+          {error && <p className="form-error" role="alert">{error}</p>}
+          <button className="primary-button" disabled={submitting}>{submitting ? 'Opening…' : mode === 'sign-in' ? 'Sign in' : 'Create account'}</button>
+        </form>
+        <button className="auth-switch" onClick={() => { setError(''); setMode(mode === 'sign-in' ? 'sign-up' : 'sign-in'); }}>{mode === 'sign-in' ? 'New here? Create an account' : 'Already have an account? Sign in'}</button>
+      </div>
+    </main>
+  );
+}
+
+function OnboardingScreen({ onComplete }: { onComplete: (profile: Profile) => void }) {
+  const [displayName, setDisplayName] = useState('');
+  const [timezone, setTimezone] = useState(() => Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setError('');
+    setSubmitting(true);
+    const response = await fetch('/api/profile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
+      body: JSON.stringify({ displayName, timezone }),
+    });
+    const payload = await response.json().catch(() => null) as { profile?: Profile; error?: string } | null;
+    setSubmitting(false);
+    if (!response.ok || !payload?.profile) {
+      setError(payload?.error ?? 'We could not save your preferences.');
+      return;
+    }
+    onComplete(payload.profile);
+  };
+
+  return (
+    <main className="auth-screen onboarding-screen">
+      <div className="auth-card">
+        <div className="auth-brand"><span className="wordmark-mark">m</span><span>munimuni</span></div>
+        <p className="eyebrow">Before your first page</p>
+        <h1>Let’s make this yours.</h1>
+        <p className="auth-intro">A couple of quiet details help Munimuni keep your dates right across devices.</p>
+        <form onSubmit={submit} className="auth-form">
+          <label>Your name<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" autoFocus required maxLength={80} /></label>
+          <label>Time zone<input value={timezone} onChange={(event) => setTimezone(event.target.value)} required maxLength={80} /></label>
+          {error && <p className="form-error" role="alert">{error}</p>}
+          <button className="primary-button" disabled={submitting}>{submitting ? 'Saving…' : 'Open my journal'}</button>
+        </form>
+      </div>
+    </main>
+  );
 }
 
 export default App;
