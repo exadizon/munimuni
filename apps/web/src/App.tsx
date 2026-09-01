@@ -172,7 +172,10 @@ function App() {
             <button className="date-nav" onClick={() => selectDate(nextDay)} aria-label="Next day">→</button>
           </div>
           <div className="paper-wrap">
-            <div className="paper-lines" aria-hidden="true" />
+            <div className="editor-toolbar" aria-label="Editor status">
+              <span>Plain text</span>
+              <span>Saved on this device</span>
+            </div>
             <textarea
               className="editor"
               value={content}
