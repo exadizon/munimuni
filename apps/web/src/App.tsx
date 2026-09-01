@@ -43,6 +43,7 @@ function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [calendarOpen, setCalendarOpen] = useState(false);
   const saveTimer = useRef<number | undefined>(undefined);
+  const editorRef = useRef<HTMLTextAreaElement | null>(null);
 
   const entryForDate = entries.find((entry) => entry.date === selectedDate && !entry.deletedAt);
 
@@ -81,6 +82,12 @@ function App() {
     saveSetting('font', writingFont);
     saveSetting('size', writingSize);
   }, [appearance, accent, writingFont, writingSize]);
+
+  useEffect(() => {
+    if (!editorRef.current) return;
+    editorRef.current.style.height = 'auto';
+    editorRef.current.style.height = `${Math.max(editorRef.current.scrollHeight, window.innerHeight * 0.62)}px`;
+  }, [content]);
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
@@ -177,6 +184,7 @@ function App() {
               <span>Saved on this device</span>
             </div>
             <textarea
+              ref={editorRef}
               className="editor"
               value={content}
               onChange={(event) => setContent(event.target.value)}

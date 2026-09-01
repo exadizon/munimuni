@@ -26,7 +26,11 @@ with sync_playwright() as playwright:
 
     page.get_by_role('button', name='Open settings').click()
     page.get_by_role('button', name='Dark').click()
+    page.get_by_role('button', name='A clear modern').click()
     assert page.locator('html[data-appearance="dark"]').count() == 1
+    assert page.locator('.paper-wrap').evaluate("element => getComputedStyle(element).borderWidth") == '0px'
+    assert page.locator('textarea.editor').evaluate("element => getComputedStyle(element).outlineStyle") == 'none'
+    assert page.get_by_role('button', name='A clear modern').evaluate("element => getComputedStyle(element).color") != 'rgb(0, 0, 0)'
     page.reload()
     page.wait_for_load_state('networkidle')
     page.locator('.date-nav').nth(1).click()
