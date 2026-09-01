@@ -204,6 +204,14 @@ function JournalApp({ userId }: { userId: string }) {
               <button className="small-button" onClick={() => changeMonth(-1)} aria-label="Previous month">←</button>
               <button className="small-button" onClick={() => changeMonth(1)} aria-label="Next month">→</button>
             </div>
+
+            <div className="month-recap">
+              <p className="recap-label">Monthly recap</p>
+                rows={3}
+                aria-label={`Recap for ${formatMonth(month)}`}
+              />
+            </div>
+
           </div>
           <button className="today-button" onClick={() => { setMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1)); selectDate(today); }}>Return to today <span>⌘ T</span></button>
           <div className="calendar" aria-label="Journal calendar">
@@ -216,17 +224,7 @@ function JournalApp({ userId }: { userId: string }) {
           </div>
           <div className="calendar-note">
               <span className="legend-dot" /> days with entries
-              {monthEntryCount > 0 && (
-                <div className="month-review">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-                    <line x1="16" y1="2" x2="16" y2="6"></line>
-                    <line x1="8" y1="2" x2="8" y2="6"></line>
-                    <line x1="3" y1="10" x2="21" y2="10"></line>
-                  </svg>
-                  <span>{monthEntryCount} entry{monthEntryCount !== 1 && 's'}</span>
-                </div>
-              )}
+    
             </div>
         </aside>
 
