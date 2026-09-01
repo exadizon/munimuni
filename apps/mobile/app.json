@@ -1,0 +1,13 @@
+{
+  "expo": {
+    "name": "Munimuni",
+    "slug": "munimuni",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "munimuni",
+    "ios": { "supportsTablet": true },
+    "android": { "adaptiveIcon": { "backgroundColor": "#F4F0E8" } },
+    "plugins": ["expo-sharing"]
+  }
+}
