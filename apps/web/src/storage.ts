@@ -5,6 +5,7 @@ const STORE_NAME = 'entries';
 const OUTBOX_STORE_NAME = 'outbox';
 const FALLBACK_KEY = 'munimuni.entries';
 const OUTBOX_FALLBACK_KEY = 'munimuni.outbox';
+const LOCAL_BACKUP_KEY = 'munimuni.localBackup';
 
 const readFallback = (): JournalEntry[] => {
   try {
@@ -16,6 +17,20 @@ const readFallback = (): JournalEntry[] => {
 
 const writeFallback = (entries: JournalEntry[]) => {
   localStorage.setItem(FALLBACK_KEY, JSON.stringify(entries));
+};
+
+const readLocalBackup = (dateKey: string): string => {
+  try {
+    return localStorage.getItem(`${LOCAL_BACKUP_KEY}.${dateKey}`) ?? '';
+  } catch {
+    return '';
+  }
+};
+
+const writeLocalBackup = (dateKey: string, content: string) => {
+  try {
+    localStorage.setItem(`${LOCAL_BACKUP_KEY}.${dateKey}`, content);
+  } catch {}
 };
 
 const readOutboxFallback = (): JournalEntry[] => {
@@ -122,3 +137,6 @@ export const exportEntries = (entries: JournalEntry[], format: 'markdown' | 'tex
   }
   return activeEntries.map((entry) => `# ${entry.date}\n\n${entry.content.trim()}`).join('\n\n');
 };
+
+export const getLocalBackup = (dateKey: string): string => readLocalBackup(dateKey);
+export const saveLocalBackup = (dateKey: string, content: string) => writeLocalBackup(dateKey, content);

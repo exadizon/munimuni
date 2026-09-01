@@ -135,6 +135,18 @@ function JournalApp({ userId }: { userId: string }) {
 
   const entryDates = useMemo(() => new Set(entries.filter((entry) => entry.content.trim() && !entry.deletedAt).map((entry) => entry.date)), [entries]);
 
+  const monthEntryCount = useMemo(() => {
+    const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
+    const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0);
+    const monthEntries = entries.filter((entry) => {
+      const entryDate = new Date(entry.date.slice(0, 4), parseInt(entry.date.slice(4, 6)) - 1, entry.date.slice(6, 8));
+      return entryDate >= monthStart && entryDate <= monthEnd;
+    });
+    const count = monthEntries.length;
+    const words = monthEntries.reduce((total, entry) => total + countWords(entry.content), 0);
+    return { count, words };
+  }, [entries, month]);
+
   const selectDate = (date: string) => {
     window.clearTimeout(saveTimer.current);
     const current = entries.find((entry) => entry.date === selectedDate);
@@ -203,7 +215,15 @@ function JournalApp({ userId }: { userId: string }) {
               return <button className={`calendar-day ${date === selectedDate ? 'selected' : ''} ${date === today ? 'today' : ''}`} key={date} onClick={() => selectDate(date)}>{day}{entryDates.has(date) && <i />}</button>;
             })}
           </div>
-          <div className="calendar-note"><span className="legend-dot" /> days with entries</div>
+          <div className="calendar-note">
+              <span className="legend-dot" /> days with entries
+              {monthEntryCount.count > 0 && (
+                <div className="month-review">
+                  <span>{monthEntryCount.count} {monthEntryCount.count === 1 ? 'entry' : 'entries'}</span>
+                  <span>{monthEntryCount.words} {monthEntryCount.words === 1 ? 'word' : 'words'}</span>
+                </div>
+              )}
+            </div>
         </aside>
 
         <section className="editor-area">
@@ -223,6 +243,11 @@ function JournalApp({ userId }: { userId: string }) {
             <div className="editor-toolbar" aria-label="Editor status">
               <span>Plain text</span>
               <span>Saved on this device</span>
+              <button className="save-button" onClick={() => {
+                saveLocalBackup(selectedDate, content);
+                setSaveState('saved');
+              }} title="Save locally">💾</button>
+              <button className="sync-button" onClick={() => syncWithServer()} title="Sync now">↻</button>
             </div>
             <textarea
               ref={editorRef}
