@@ -1,3 +1,4 @@
+import { LogoMark } from './Logo';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   countWords,
@@ -193,7 +194,7 @@ function JournalApp({ profile }: { profile: Profile }) {
     <div className="app-shell">
       <header className="topbar" data-tauri-drag-region>
         <button className="wordmark" onClick={() => selectDate(today)} aria-label="Go to today">
-          <span className="wordmark-mark">m</span> munimuni
+          <LogoMark /> munimuni
         </button>
         <div className="topbar-actions">
           <span className="sync-status">
