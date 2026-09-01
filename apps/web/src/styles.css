@@ -26,12 +26,19 @@
 .auth-form label { display: grid; gap: 8px; color: var(--muted); font: 10px 'DM Mono', monospace; letter-spacing: .1em; text-transform: uppercase; }
 .auth-form input { width: 100%; padding: 12px 13px; border: 1px solid var(--faint); border-radius: 3px; background: var(--bg); color: var(--ink); font: 15px 'DM Sans', sans-serif; letter-spacing: 0; text-transform: none; }
 .auth-form input:focus { border-color: var(--accent); outline: 2px solid color-mix(in srgb, var(--accent) 32%, transparent); outline-offset: 1px; }
+.password-field { position: relative; display: block; }
+.password-field input { padding-right: 48px; }
+.password-toggle { position: absolute; top: 50%; right: 7px; width: 34px; height: 34px; display: grid; place-items: center; transform: translateY(-50%); border-radius: 3px; background: transparent; color: var(--muted); }
+.password-toggle:hover { background: var(--accent-soft); color: var(--accent); }
+.password-toggle svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.5; }
 .auth-form small { margin-top: -3px; color: var(--muted); font: 10px 'DM Mono', monospace; letter-spacing: 0; text-transform: none; }
 .primary-button { margin-top: 5px; padding: 13px 16px; border: 1px solid var(--accent); border-radius: 3px; background: var(--accent); color: var(--paper); font-size: 12px; }
 .primary-button:hover { filter: brightness(1.08); }
 .primary-button:disabled { cursor: wait; opacity: .6; }
-.auth-switch { margin-top: 22px; padding: 0; background: transparent; color: var(--accent); font: 11px 'DM Mono', monospace; text-align: left; }
+.auth-switch { display: block; margin-top: 22px; padding: 0; background: transparent; color: var(--accent); font: 11px 'DM Mono', monospace; text-align: left; }
 .form-error { margin: 0; color: #d87878; font: 11px/1.5 'DM Mono', monospace; }
+.form-success { margin: 0; color: var(--accent); font: 11px/1.5 'DM Mono', monospace; }
+.auth-forgot { margin-top: 18px; }
 .onboarding-screen .auth-brand { margin-bottom: 42px; }
 .status-dot.saving, .status-dot.pending, .status-dot.syncing { animation: breathe 1s infinite alternate; }
 @media (max-width: 720px) { .auth-screen { align-items: start; padding: 20px; } .auth-card { margin-top: 6vh; padding: 30px 24px; } .auth-brand { margin-bottom: 42px; } .onboarding-screen .auth-card { margin-top: 3vh; } }
