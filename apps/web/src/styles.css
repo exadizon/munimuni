@@ -306,20 +306,20 @@
 }
 
 .landing-demo-bar {
-  padding: 14px 28px;
+  padding: 12px 24px;
   border-bottom: 1px solid var(--faint);
   background: color-mix(in srgb, var(--panel) 75%, var(--bg));
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 16px;
 }
 
 .demo-control-group {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
 }
 
 .demo-label {
@@ -331,111 +331,26 @@
 
 .landing-demo-canvas {
   display: grid;
-  grid-template-columns: 340px 1fr;
-  min-height: 520px;
+  grid-template-columns: 300px 1fr;
+  min-height: 480px;
   background: var(--bg);
 }
 
 .landing-demo-sidebar {
-  padding: 44px 36px 40px;
+  padding: 48px 34px 32px;
   border-right: 1px solid var(--faint);
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.landing-demo-sidebar .calendar-heading {
-  margin-bottom: 24px;
-}
-
-.landing-demo-sidebar .calendar {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 10px 4px;
-  width: 100%;
-}
-
-.landing-demo-sidebar .weekday {
-  padding-bottom: 12px;
-  color: var(--muted);
-  font: 11px 'DM Mono', monospace;
-  text-align: center;
-}
-
-.landing-demo-sidebar .calendar-day {
-  position: relative;
-  width: 32px;
-  height: 32px;
-  justify-self: center;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--ink);
-  font: 12px 'DM Mono', monospace;
-  transition: background 0.15s ease, color 0.15s ease;
-}
-
-.landing-demo-sidebar .calendar-day:hover {
-  background: var(--accent-soft);
-  color: var(--accent);
-}
-
-.landing-demo-sidebar .calendar-day.selected {
-  background: var(--accent);
-  color: var(--paper);
-}
-
-.landing-demo-sidebar .calendar-day.today:not(.selected) {
-  box-shadow: inset 0 -2px 0 var(--accent);
-  color: var(--ink);
-}
-
-.landing-demo-sidebar .calendar-day i {
-  position: absolute;
-  bottom: 2px;
-  left: 50%;
-  width: 3px;
-  height: 3px;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.landing-demo-sidebar .calendar-day.selected i {
-  background: var(--paper);
-}
-
-.landing-demo-sidebar .calendar-note {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 32px;
-  color: var(--muted);
-  font: 11px 'DM Mono', monospace;
 }
 
 .landing-demo-editor {
-  padding: 48px clamp(28px, 5vw, 68px) 44px;
+  padding: 42px clamp(24px, 5vw, 64px) 36px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-}
-
-.landing-demo-editor .entry-header {
-  margin-bottom: 32px;
 }
 
 .landing-demo-editor .editor {
   min-height: 240px;
   height: auto;
-  line-height: 1.7;
-}
-
-.landing-demo-editor .paper-footer {
-  margin-top: 24px;
-  padding-top: 16px;
-  border-top: 1px solid var(--faint);
 }
 
 /* Principles & Feature Cards */

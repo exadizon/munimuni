@@ -250,6 +250,16 @@ export function LandingPage({ initialAuthMode = 'sign-in' }: { initialAuthMode?:
                   </button>
                 </div>
               </div>
+              <button
+                type="button"
+                className="today-button"
+                onClick={() => {
+                  const now = new Date(); setDemoMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+                  setDemoDate(todayKey);
+                }}
+              >
+                Return to today <span>⌘ T</span>
+              </button>
 
               <div className="calendar" aria-label="Demo calendar">
                 {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, idx) => (
