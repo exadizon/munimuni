@@ -8,6 +8,10 @@ export const metadata: Metadata = {
   applicationName: 'Munimuni',
   appleWebApp: { capable: true, title: 'Munimuni', statusBarStyle: 'default' },
   formatDetection: { telephone: false },
+  icons: {
+    icon: '/icon.svg',
+    apple: '/icons/icon-192.svg',
+  },
 };
 
 export const viewport: Viewport = {
