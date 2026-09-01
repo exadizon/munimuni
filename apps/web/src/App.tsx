@@ -135,17 +135,16 @@ function JournalApp({ userId }: { userId: string }) {
 
   const entryDates = useMemo(() => new Set(entries.filter((entry) => entry.content.trim() && !entry.deletedAt).map((entry) => entry.date)), [entries]);
 
-  const monthEntryCount = useMemo(() => {
+  const monthEntriesThisMonth = useMemo(() => {
     const monthStart = new Date(month.getFullYear(), month.getMonth(), 1);
     const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0);
-    const monthEntries = entries.filter((entry) => {
+    return entries.filter((entry) => {
       const entryDate = new Date(entry.date.slice(0, 4), parseInt(entry.date.slice(4, 6)) - 1, entry.date.slice(6, 8));
       return entryDate >= monthStart && entryDate <= monthEnd;
     });
-    const count = monthEntries.length;
-    const words = monthEntries.reduce((total, entry) => total + countWords(entry.content), 0);
-    return { count, words };
   }, [entries, month]);
+
+  const monthEntryCount = useMemo(() => monthEntriesThisMonth.length, [monthEntriesThisMonth]);
 
   const selectDate = (date: string) => {
     window.clearTimeout(saveTimer.current);
@@ -217,10 +216,15 @@ function JournalApp({ userId }: { userId: string }) {
           </div>
           <div className="calendar-note">
               <span className="legend-dot" /> days with entries
-              {monthEntryCount.count > 0 && (
+              {monthEntryCount > 0 && (
                 <div className="month-review">
-                  <span>{monthEntryCount.count} {monthEntryCount.count === 1 ? 'entry' : 'entries'}</span>
-                  <span>{monthEntryCount.words} {monthEntryCount.words === 1 ? 'word' : 'words'}</span>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                    <line x1="16" y1="2" x2="16" y2="6"></line>
+                    <line x1="8" y1="2" x2="8" y2="6"></line>
+                    <line x1="3" y1="10" x2="21" y2="10"></line>
+                  </svg>
+                  <span>{monthEntryCount} entry{monthEntryCount !== 1 && 's'}</span>
                 </div>
               )}
             </div>
