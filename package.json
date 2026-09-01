@@ -1,0 +1,19 @@
+{
+  "name": "munimuni",
+  "private": true,
+  "version": "0.1.0",
+  "description": "A quiet place for your thoughts.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm --workspace @munimuni/web run dev",
+    "build": "npm --workspace @munimuni/web run build",
+    "test": "npm --workspace @munimuni/core run test"
+  },
+  "dependencies": {
+    "@neon/config": "^1.1.0",
+    "@neon/env": "^1.1.6"
+  }
+}
