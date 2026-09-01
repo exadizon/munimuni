@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { countWords, formatLongDate, formatMonth, parseDateKey, toDateKey } from '@munimuni/core/journal';
 import { AuthScreen } from './App';
+import { LogoMark } from './Logo';
 
 type Appearance = 'system' | 'light' | 'dark';
 type Accent = 'neutral' | 'blue' | 'green' | 'amber' | 'rose' | 'violet';
@@ -57,7 +58,7 @@ export function LandingPage({ initialAuthMode = 'sign-in' }: { initialAuthMode?:
       <header className="landing-nav">
         <div className="landing-nav-inner">
           <a href="#" className="wordmark" aria-label="Munimuni Home">
-            <span className="wordmark-mark">m</span> munimuni
+            <LogoMark /> munimuni
           </a>
 
           <nav className="landing-nav-links" aria-label="Main Navigation">
@@ -526,7 +527,7 @@ export function LandingPage({ initialAuthMode = 'sign-in' }: { initialAuthMode?:
         <div className="landing-footer-inner">
           <div className="footer-brand-block">
             <a href="#" className="wordmark">
-              <span className="wordmark-mark">m</span> munimuni
+              <LogoMark /> munimuni
             </a>
             <p className="footer-tagline">
               A quiet place for your thoughts. Local-first, plaintext, and private.

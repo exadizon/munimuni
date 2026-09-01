@@ -13,6 +13,7 @@ import {
 import { authClient } from './auth-client';
 import { exportEntries, listEntries, listPendingEntries, removePendingEntries, saveEntry } from './storage';
 import { LandingPage } from './LandingPage';
+import { LogoMark } from './Logo';
 
 type Appearance = 'system' | 'light' | 'dark';
 type Accent = 'neutral' | 'blue' | 'green' | 'amber' | 'rose' | 'violet';
@@ -172,7 +173,7 @@ function JournalApp({ userId }: { userId: string }) {
     <div className="app-shell">
       <header className="topbar">
         <button className="wordmark" onClick={() => selectDate(today)} aria-label="Go to today">
-          <span className="wordmark-mark">m</span> munimuni
+          <LogoMark /> munimuni
         </button>
         <div className="topbar-actions">
           <span className="sync-status"><span className={`status-dot ${saveState}`} />{saveState === 'saving' ? 'Saving locally' : syncState === 'syncing' ? 'Syncing securely' : syncState === 'offline' ? 'Saved locally' : syncState === 'pending' ? 'Waiting to sync' : 'Synced securely'}</span>
@@ -247,6 +248,26 @@ function JournalApp({ userId }: { userId: string }) {
           <SettingGroup label="Writing font"><div className="font-list">{(['serif', 'sans', 'mono'] as WritingFont[]).map((value) => <button className={`${writingFont === value ? 'active' : ''} font-${value}`} key={value} onClick={() => setWritingFont(value)}>{value === 'serif' ? 'A quiet classic' : value === 'sans' ? 'A clear modern' : 'A measured typewriter'}</button>)}</div></SettingGroup>
           <SettingGroup label="Writing size"><div className="size-list">{(['small', 'medium', 'large'] as WritingSize[]).map((value) => <button className={writingSize === value ? 'active' : ''} key={value} onClick={() => setWritingSize(value)}>{value[0].toUpperCase() + value.slice(1)}</button>)}</div></SettingGroup>
           <SettingGroup label="Data"><div className="export-list"><button onClick={() => downloadExport('markdown')}>Export Markdown <span>↗</span></button><button onClick={() => downloadExport('text')}>Export plain text <span>↗</span></button></div></SettingGroup>
+          <SettingGroup label="Account">
+            <div className="account-card">
+              <div className="account-status">
+                <div className="account-user-info">
+                  <span className="account-user-name">Personal Journal</span>
+                  <span className="account-sync-badge">
+                    <span className="status-dot saving" /> Cloud sync active
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="signout-button"
+                onClick={() => void authClient.signOut().then(() => window.location.assign('/'))}
+              >
+                <span>Log out</span>
+                <span>→</span>
+              </button>
+            </div>
+          </SettingGroup>
           <p className="settings-footnote">Your entries are saved on this device first, then synced securely when you’re signed in.</p>
         </aside>}
       </main>
@@ -368,7 +389,7 @@ export function AuthScreen({ initialMode = 'sign-in' }: { initialMode?: 'sign-in
   return (
     <main className="auth-screen">
       <div className="auth-card">
-        <div className="auth-brand"><span className="wordmark-mark">m</span><span>munimuni</span></div>
+        <div className="auth-brand"><LogoMark /><span>munimuni</span></div>
         <p className="eyebrow">A quiet place for your thoughts</p>
         <h1>{mode === 'sign-in' ? 'Welcome back.' : mode === 'sign-up' ? 'Make space to begin.' : 'Reset your password.'}</h1>
         <p className="auth-intro">{mode === 'forgot-password' ? 'Enter your email and we’ll send a secure link if there’s an account for it.' : 'Your journal stays yours. Sign in to carry it securely between your devices.'}</p>
@@ -432,7 +453,7 @@ export function PasswordResetScreen() {
     return (
       <main className="auth-screen">
         <div className="auth-card">
-          <div className="auth-brand"><span className="wordmark-mark">m</span><span>munimuni</span></div>
+          <div className="auth-brand"><LogoMark /><span>munimuni</span></div>
           <p className="eyebrow">Password reset</p>
           <h1>That link is no longer valid.</h1>
           <p className="auth-intro">Request another reset link from the sign-in page and we’ll get you back in.</p>
@@ -445,7 +466,7 @@ export function PasswordResetScreen() {
   return (
     <main className="auth-screen">
       <div className="auth-card">
-        <div className="auth-brand"><span className="wordmark-mark">m</span><span>munimuni</span></div>
+        <div className="auth-brand"><LogoMark /><span>munimuni</span></div>
         <p className="eyebrow">Password reset</p>
         <h1>Choose a new password.</h1>
         <p className="auth-intro">Use at least 12 characters. This will replace your old password on every device.</p>
@@ -490,7 +511,7 @@ function OnboardingScreen({ onComplete }: { onComplete: (profile: Profile) => vo
   return (
     <main className="auth-screen onboarding-screen">
       <div className="auth-card">
-        <div className="auth-brand"><span className="wordmark-mark">m</span><span>munimuni</span></div>
+        <div className="auth-brand"><LogoMark /><span>munimuni</span></div>
         <p className="eyebrow">Before your first page</p>
         <h1>Let’s make this yours.</h1>
         <p className="auth-intro">A couple of quiet details help Munimuni keep your dates right across devices.</p>
