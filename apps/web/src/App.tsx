@@ -156,7 +156,8 @@ function JournalApp({ userId }: { userId: string }) {
       setMonthRecaps(storedRecaps);
       const current = storedEntries.find((entry) => entry.date === today && !entry.deletedAt);
       setContent(current?.content ?? '');
-      const recap = storedRecaps.find((r) => r.month === currentMonthKey);
+      const initialMonthKey = toMonthKey(new Date());
+      const recap = storedRecaps.find((r) => r.month === initialMonthKey);
       setMonthRecapContent(recap?.content ?? '');
       setSaveState('saved');
       void syncWithServer();
@@ -164,7 +165,7 @@ function JournalApp({ userId }: { userId: string }) {
     return () => {
       cancelled = true;
     };
-  }, [userId, currentMonthKey, syncWithServer]);
+  }, [userId, syncWithServer]);
 
   // Keep month recap content in sync when month changes or recaps update from sync
   useEffect(() => {
@@ -239,23 +240,29 @@ function JournalApp({ userId }: { userId: string }) {
     el.style.height = `${nextHeight}px`;
   }, [content]);
 
-  // Keep caret visible when virtual keyboard resizes viewport (mobile)
+  // Keep caret visible when virtual keyboard resizes viewport (mobile) - throttled, only when keyboard likely open
   useEffect(() => {
     const viewport = window.visualViewport;
     if (!viewport) return;
+    let rafId: number | null = null;
     const handleResize = () => {
-      if (document.activeElement === editorRef.current && editorRef.current) {
-        // Give browser a tick to layout, then ensure caret is visible
-        window.requestAnimationFrame(() => {
-          editorRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-        });
-      }
+      if (rafId !== null) return;
+      rafId = window.requestAnimationFrame(() => {
+        rafId = null;
+        if (document.activeElement !== editorRef.current || !editorRef.current) return;
+        // Only act when viewport shrank significantly (keyboard open), not on alt-tab restore
+        const keyboardHeight = window.innerHeight - viewport.height;
+        if (keyboardHeight < 120) return;
+        // Ensure caret is visible without forcing scroll when not needed
+        try {
+          editorRef.current.scrollIntoView({ block: 'nearest' });
+        } catch {}
+      });
     };
     viewport.addEventListener('resize', handleResize);
-    viewport.addEventListener('scroll', handleResize);
     return () => {
+      if (rafId !== null) window.cancelAnimationFrame(rafId);
       viewport.removeEventListener('resize', handleResize);
-      viewport.removeEventListener('scroll', handleResize);
     };
   }, []);
 
