@@ -490,29 +490,37 @@ function JournalApp({ userId }: { userId: string }) {
   };
 
   const openHistory = () => {
-    setVersions(listVersions(selectedDate));
+    const historyKey = editorMode === 'year-reflection' ? currentYearKey : selectedDate;
+    setVersions(listVersions(historyKey));
     setHistoryOpen(true);
     setVersionRefreshKey((k) => k + 1);
   };
 
   const handleSaveVersion = () => {
-    saveVersion(selectedDate, content);
-    setVersions(listVersions(selectedDate));
+    const historyKey = editorMode === 'year-reflection' ? currentYearKey : selectedDate;
+    const contentToSave = editorMode === 'year-reflection' ? yearReflectionContent : content;
+    saveVersion(historyKey, contentToSave);
+    setVersions(listVersions(historyKey));
     setVersionRefreshKey((k) => k + 1);
     setSaveFeedback('Version saved');
     window.setTimeout(() => setSaveFeedback(null), 2000);
   };
 
   const handleRestoreVersion = (versionContent: string) => {
-    setContent(versionContent);
+    if (editorMode === 'year-reflection') {
+      setYearReflectionContent(versionContent);
+    } else {
+      setContent(versionContent);
+    }
     setHistoryOpen(false);
     setSaveFeedback('Version restored');
     window.setTimeout(() => setSaveFeedback(null), 2000);
   };
 
   const handleDeleteVersion = (index: number) => {
-    deleteVersion(selectedDate, index);
-    setVersions(listVersions(selectedDate));
+    const historyKey = editorMode === 'year-reflection' ? currentYearKey : selectedDate;
+    deleteVersion(historyKey, index);
+    setVersions(listVersions(historyKey));
     setVersionRefreshKey((k) => k + 1);
   };
 
@@ -766,6 +774,10 @@ function JournalApp({ userId }: { userId: string }) {
                   <div className="editor-toolbar-actions">
                     <span className="toolbar-status">{yearReflectionSaveState === 'saving' ? 'Saving...' : 'Saved on this device'}</span>
                     {saveFeedback && <span className="save-feedback" role="status">{saveFeedback}</span>}
+                    <button className="history-button" onClick={openHistory} data-tooltip="Browse previous versions" title="Version history" aria-label="Version history">
+                      <HistoryIcon />
+                      {getVersionCount(currentYearKey) > 0 && <span className="history-count">{getVersionCount(currentYearKey)}</span>}
+                    </button>
                     <button className="save-button" onClick={() => { saveYearReflection(makeYearReflection(currentYearKey, yearReflectionContent)); }} data-tooltip="Save a local backup on this device" title="Save locally" aria-label="Save locally">
                       <FloppyDiskIcon />
                       <span>Save</span>
@@ -856,12 +868,12 @@ function JournalApp({ userId }: { userId: string }) {
           <p className="settings-footnote">Your entries are saved on this device first, then synced securely when you are signed in. Monthly reflections are saved per month and included in exports.</p>
         </aside>}
 
-        {historyOpen && editorMode === 'daily' && (
+        {historyOpen && (editorMode === 'daily' || editorMode === 'year-reflection') && (
           <aside className="history-panel">
             <div className="settings-title">
               <div>
                 <p className="eyebrow">Version history</p>
-                <h2>{selectedDate}</h2>
+                <h2>{editorMode === 'year-reflection' ? currentYearKey : selectedDate}</h2>
               </div>
               <button className="close-button" onClick={() => setHistoryOpen(false)} aria-label="Close version history">×</button>
             </div>
