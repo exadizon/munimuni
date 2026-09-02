@@ -1,33 +1,47 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { JournalEntry, MonthRecap } from '@munimuni/core/journal';
+import type { JournalEntry, MonthReflection, YearReflection } from '@munimuni/core/journal';
 import {
   countWords,
   formatLongDate,
   formatMonth,
   makeEntry,
-  makeMonthRecap,
+  makeMonthReflection,
+  makeYearReflection,
   parseDateKey,
   toDateKey,
   toMonthKey,
+  toYearKey,
 } from '@munimuni/core/journal';
 import { authClient } from './auth-client';
 import {
+  deleteVersion,
+  downloadExport as downloadExportFile,
   exportAll,
+  exportDay,
   exportEntries,
+  exportMonth,
+  exportYear,
   getLocalBackup,
   getLocalBackupTimestamp,
+  getVersionCount,
   listEntries,
   listLocalBackups,
-  listMonthRecaps,
+  listMonthReflections,
   listPendingEntries,
-  listPendingMonthRecaps,
+  listPendingMonthReflections,
+  listPendingYearReflections,
+  listVersions,
+  listYearReflections,
   removePendingEntries,
-  removePendingMonthRecaps,
+  removePendingMonthReflections,
+  removePendingYearReflections,
   saveEntry,
   saveLocalBackup,
-  saveMonthRecap,
+  saveMonthReflection,
+  saveVersion,
+  saveYearReflection,
 } from './storage';
 import { LandingPage } from './LandingPage';
 import { LogoMark } from './Logo';
@@ -82,15 +96,50 @@ function CalendarBlankIcon() {
   );
 }
 
+function HistoryIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l4 2" />
+    </svg>
+  );
+}
+
+function getUserInitials(name: string | undefined): string {
+  if (!name) return '?';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length === 1) return parts[0][0]?.toUpperCase() ?? '?';
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function getTimeAgo(date: Date): string {
+  const now = new Date();
+  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  if (seconds < 60) return 'Just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days}d ago`;
+  return date.toLocaleDateString();
+}
+
 function JournalApp({ userId }: { userId: string }) {
+  const { data: session } = authClient.useSession();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [monthRecaps, setMonthRecaps] = useState<MonthRecap[]>([]);
+  const [monthReflections, setMonthReflections] = useState<MonthReflection[]>([]);
+  const [yearReflections, setYearReflections] = useState<YearReflection[]>([]);
   const [selectedDate, setSelectedDate] = useState(today);
   const [month, setMonth] = useState(() => new Date(new Date().getFullYear(), new Date().getMonth(), 1));
   const [content, setContent] = useState('');
-  const [monthRecapContent, setMonthRecapContent] = useState('');
+  const [monthReflectionContent, setMonthReflectionContent] = useState('');
+  const [yearReflectionContent, setYearReflectionContent] = useState('');
   const [saveState, setSaveState] = useState<'loading' | 'saved' | 'saving'>('loading');
-  const [monthRecapSaveState, setMonthRecapSaveState] = useState<'saved' | 'saving'>('saved');
+  const [monthReflectionSaveState, setMonthReflectionSaveState] = useState<'saved' | 'saving'>('saved');
+  const [yearReflectionSaveState, setYearReflectionSaveState] = useState<'saved' | 'saving'>('saved');
   const [appearance, setAppearance] = useState<Appearance>(() => getStored('appearance', 'system'));
   const [accent, setAccent] = useState<Accent>(() => getStored('accent', 'neutral'));
   const [writingFont, setWritingFont] = useState<WritingFont>(() => getStored('font', 'serif'));
@@ -100,48 +149,68 @@ function JournalApp({ userId }: { userId: string }) {
   const [syncState, setSyncState] = useState<'offline' | 'syncing' | 'synced' | 'pending'>('syncing');
   const [saveFeedback, setSaveFeedback] = useState<string | null>(null);
   const [backupRefreshKey, setBackupRefreshKey] = useState(0);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [editorMode, setEditorMode] = useState<'daily' | 'month-reflection' | 'year-reflection'>('daily');
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [versions, setVersions] = useState<Array<{ content: string; timestamp: string }>>([]);
+  const [versionRefreshKey, setVersionRefreshKey] = useState(0);
+  const userMenuRef = useRef<HTMLDivElement | null>(null);
   const saveTimer = useRef<number | undefined>(undefined);
   const monthSaveTimer = useRef<number | undefined>(undefined);
   const syncTimer = useRef<number | undefined>(undefined);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
-  const monthRecapRef = useRef<HTMLTextAreaElement | null>(null);
+  const monthReflectionRef = useRef<HTMLTextAreaElement | null>(null);
 
   const entryForDate = entries.find((entry) => entry.date === selectedDate && !entry.deletedAt);
   const currentMonthKey = toMonthKey(month);
-  const monthRecapForCurrentMonth = monthRecaps.find((recap) => recap.month === currentMonthKey);
+  const currentYearKey = toYearKey(new Date());
+  const monthReflectionForCurrentMonth = monthReflections.find((r) => r.month === currentMonthKey);
+  const yearReflectionForCurrentYear = yearReflections.find((r) => r.year === currentYearKey);
 
   const syncWithServer = useCallback(async () => {
     setSyncState('syncing');
     try {
       const pending = await listPendingEntries();
-      const pendingRecaps = await listPendingMonthRecaps();
-      const hasPending = pending.length > 0 || pendingRecaps.length > 0;
+      const pendingMonthReflections = await listPendingMonthReflections();
+      const pendingYearReflections = await listPendingYearReflections();
+      const hasPending = pending.length > 0 || pendingMonthReflections.length > 0 || pendingYearReflections.length > 0;
       const response = await fetch('/api/sync', {
         method: hasPending ? 'POST' : 'GET',
         headers: hasPending ? { 'Content-Type': 'application/json' } : undefined,
-        body: hasPending ? JSON.stringify({ entries: pending, monthRecaps: pendingRecaps }) : undefined,
+        body: hasPending ? JSON.stringify({ entries: pending, monthReflections: pendingMonthReflections, yearReflections: pendingYearReflections }) : undefined,
         credentials: 'same-origin',
       });
       if (!response.ok) throw new Error('Sync unavailable');
-      const payload = (await response.json()) as { entries: JournalEntry[]; monthRecaps?: MonthRecap[] };
+      const payload = (await response.json()) as { entries: JournalEntry[]; monthReflections?: MonthReflection[]; yearReflections?: YearReflection[] };
       for (const entry of payload.entries) await saveEntry(entry, { queueSync: false });
-      if (payload.monthRecaps) {
-        for (const recap of payload.monthRecaps) await saveMonthRecap(recap, { queueSync: false });
+      if (payload.monthReflections) {
+        for (const recap of payload.monthReflections) await saveMonthReflection(recap, { queueSync: false });
+      }
+      if (payload.yearReflections) {
+        for (const recap of payload.yearReflections) await saveYearReflection(recap, { queueSync: false });
       }
       setEntries((current) => {
         const next = new Map(current.map((entry) => [entry.date, entry]));
         for (const entry of payload.entries) next.set(entry.date, entry);
         return [...next.values()];
       });
-      if (payload.monthRecaps) {
-        setMonthRecaps((current) => {
+      if (payload.monthReflections) {
+        setMonthReflections((current) => {
           const next = new Map(current.map((recap) => [recap.month, recap]));
-          for (const recap of payload.monthRecaps!) next.set(recap.month, recap);
+          for (const recap of payload.monthReflections!) next.set(recap.month, recap);
+          return [...next.values()];
+        });
+      }
+      if (payload.yearReflections) {
+        setYearReflections((current) => {
+          const next = new Map(current.map((recap) => [recap.year, recap]));
+          for (const recap of payload.yearReflections!) next.set(recap.year, recap);
           return [...next.values()];
         });
       }
       await removePendingEntries(pending);
-      await removePendingMonthRecaps(pendingRecaps);
+      await removePendingMonthReflections(pendingMonthReflections);
+      await removePendingYearReflections(pendingYearReflections);
       setSyncState('synced');
     } catch {
       setSyncState('offline');
@@ -150,15 +219,19 @@ function JournalApp({ userId }: { userId: string }) {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([listEntries(), listMonthRecaps()]).then(([storedEntries, storedRecaps]) => {
+    Promise.all([listEntries(), listMonthReflections(), listYearReflections()]).then(([storedEntries, storedMonthReflections, storedYearReflections]) => {
       if (cancelled) return;
       setEntries(storedEntries);
-      setMonthRecaps(storedRecaps);
+      setMonthReflections(storedMonthReflections);
+      setYearReflections(storedYearReflections);
       const current = storedEntries.find((entry) => entry.date === today && !entry.deletedAt);
       setContent(current?.content ?? '');
       const initialMonthKey = toMonthKey(new Date());
-      const recap = storedRecaps.find((r) => r.month === initialMonthKey);
-      setMonthRecapContent(recap?.content ?? '');
+      const monthReflection = storedMonthReflections.find((r) => r.month === initialMonthKey);
+      setMonthReflectionContent(monthReflection?.content ?? '');
+      const initialYearKey = toYearKey(new Date());
+      const yearReflection = storedYearReflections.find((r) => r.year === initialYearKey);
+      setYearReflectionContent(yearReflection?.content ?? '');
       setSaveState('saved');
       void syncWithServer();
     });
@@ -167,15 +240,23 @@ function JournalApp({ userId }: { userId: string }) {
     };
   }, [userId, syncWithServer]);
 
-  // Keep month recap content in sync when month changes or recaps update from sync
+  // Keep month reflection content in sync when month changes or reflections update from sync
   useEffect(() => {
-    const recap = monthRecaps.find((r) => r.month === currentMonthKey);
+    const recap = monthReflections.find((r) => r.month === currentMonthKey);
     // Only update if not currently editing that month (avoid overwriting user typing)
     // We check if the textarea is focused - if not focused, we can safely update
-    if (document.activeElement !== monthRecapRef.current) {
-      setMonthRecapContent(recap?.content ?? '');
+    if (document.activeElement !== monthReflectionRef.current) {
+      setMonthReflectionContent(recap?.content ?? '');
     }
-  }, [currentMonthKey, monthRecaps]);
+  }, [currentMonthKey, monthReflections]);
+
+  // Keep year reflection content in sync when year changes or reflections update from sync
+  useEffect(() => {
+    const recap = yearReflections.find((r) => r.year === currentYearKey);
+    if (document.activeElement !== monthReflectionRef.current) {
+      setYearReflectionContent(recap?.content ?? '');
+    }
+  }, [currentYearKey, yearReflections]);
 
   useEffect(() => {
     if (saveState === 'loading') return;
@@ -200,23 +281,43 @@ function JournalApp({ userId }: { userId: string }) {
 
   useEffect(() => {
     window.clearTimeout(monthSaveTimer.current);
-    // Don't trigger save on initial loading of monthRecaps
-    const existing = monthRecaps.find((r) => r.month === currentMonthKey);
-    if ((existing?.content ?? '') === monthRecapContent) return;
-    setMonthRecapSaveState('saving');
+    // Don't trigger save on initial loading of monthReflections
+    const existing = monthReflections.find((r) => r.month === currentMonthKey);
+    if ((existing?.content ?? '') === monthReflectionContent) return;
+    setMonthReflectionSaveState('saving');
     monthSaveTimer.current = window.setTimeout(async () => {
       const recap = existing
-        ? { ...existing, content: monthRecapContent, updatedAt: new Date().toISOString(), version: existing.version + 1 }
-        : makeMonthRecap(currentMonthKey, monthRecapContent);
-      await saveMonthRecap(recap);
-      setMonthRecaps((current) => [...current.filter((r) => r.month !== currentMonthKey), recap]);
-      setMonthRecapSaveState('saved');
+        ? { ...existing, content: monthReflectionContent, updatedAt: new Date().toISOString(), version: existing.version + 1 }
+        : makeMonthReflection(currentMonthKey, monthReflectionContent);
+      await saveMonthReflection(recap);
+      setMonthReflections((current) => [...current.filter((r) => r.month !== currentMonthKey), recap]);
+      setMonthReflectionSaveState('saved');
       setSyncState('pending');
       window.clearTimeout(syncTimer.current);
       syncTimer.current = window.setTimeout(() => void syncWithServer(), 1_200);
     }, 700);
     return () => window.clearTimeout(monthSaveTimer.current);
-  }, [monthRecapContent, currentMonthKey, monthRecaps, syncWithServer]);
+  }, [monthReflectionContent, currentMonthKey, monthReflections, syncWithServer]);
+
+  // Year reflection save effect
+  useEffect(() => {
+    window.clearTimeout(monthSaveTimer.current);
+    const existing = yearReflections.find((r) => r.year === currentYearKey);
+    if ((existing?.content ?? '') === yearReflectionContent) return;
+    setYearReflectionSaveState('saving');
+    monthSaveTimer.current = window.setTimeout(async () => {
+      const recap = existing
+        ? { ...existing, content: yearReflectionContent, updatedAt: new Date().toISOString(), version: existing.version + 1 }
+        : makeYearReflection(currentYearKey, yearReflectionContent);
+      await saveYearReflection(recap);
+      setYearReflections((current) => [...current.filter((r) => r.year !== currentYearKey), recap]);
+      setYearReflectionSaveState('saved');
+      setSyncState('pending');
+      window.clearTimeout(syncTimer.current);
+      syncTimer.current = window.setTimeout(() => void syncWithServer(), 1_200);
+    }, 700);
+    return () => window.clearTimeout(monthSaveTimer.current);
+  }, [yearReflectionContent, currentYearKey, yearReflections, syncWithServer]);
 
   useEffect(() => {
     document.documentElement.dataset.appearance = appearance;
@@ -266,13 +367,26 @@ function JournalApp({ userId }: { userId: string }) {
     };
   }, []);
 
-  // Auto-grow month recap textarea
+  // Close user menu on outside click
   useEffect(() => {
-    if (!monthRecapRef.current) return;
-    const el = monthRecapRef.current;
+    if (!userMenuOpen) return;
+    const handleClick = (e: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [userMenuOpen]);
+
+  // Auto-grow month reflection textarea (full editor mode)
+  useEffect(() => {
+    if (!monthReflectionRef.current) return;
+    const el = monthReflectionRef.current;
     el.style.height = 'auto';
-    el.style.height = `${Math.min(Math.max(el.scrollHeight, 72), 200)}px`;
-  }, [monthRecapContent, month]);
+    const nextHeight = Math.max(el.scrollHeight, window.innerHeight * 0.45);
+    el.style.height = `${nextHeight}px`;
+  }, [monthReflectionContent, editorMode]);
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
@@ -298,20 +412,21 @@ function JournalApp({ userId }: { userId: string }) {
     setContent(next?.content ?? '');
     setCalendarOpen(false);
     setSaveState('saved');
+    setEditorMode('daily');
   };
 
   const changeMonth = (offset: number) => {
-    // Flush current month recap before switching
+    // Flush current month reflection before switching
     window.clearTimeout(monthSaveTimer.current);
-    const existing = monthRecaps.find((r) => r.month === currentMonthKey);
-    if (existing && existing.content !== monthRecapContent) {
-      const updated = { ...existing, content: monthRecapContent, updatedAt: new Date().toISOString(), version: existing.version + 1 };
-      void saveMonthRecap(updated);
-      setMonthRecaps((items) => [...items.filter((r) => r.month !== currentMonthKey), updated]);
-    } else if (!existing && monthRecapContent.trim()) {
-      const created = makeMonthRecap(currentMonthKey, monthRecapContent);
-      void saveMonthRecap(created);
-      setMonthRecaps((items) => [...items, created]);
+    const existing = monthReflections.find((r) => r.month === currentMonthKey);
+    if (existing && existing.content !== monthReflectionContent) {
+      const updated = { ...existing, content: monthReflectionContent, updatedAt: new Date().toISOString(), version: existing.version + 1 };
+      void saveMonthReflection(updated);
+      setMonthReflections((items) => [...items.filter((r) => r.month !== currentMonthKey), updated]);
+    } else if (!existing && monthReflectionContent.trim()) {
+      const created = makeMonthReflection(currentMonthKey, monthReflectionContent);
+      void saveMonthReflection(created);
+      setMonthReflections((items) => [...items, created]);
     }
     setMonth((current) => new Date(current.getFullYear(), current.getMonth() + offset, 1));
   };
@@ -340,15 +455,15 @@ function JournalApp({ userId }: { userId: string }) {
       setSaveState('saved');
     }
 
-    const existingRecap = monthRecaps.find((r) => r.month === currentMonthKey);
+    const existingRecap = monthReflections.find((r) => r.month === currentMonthKey);
     const existingRecapContent = existingRecap?.content ?? '';
-    if (monthRecapContent !== existingRecapContent) {
+    if (monthReflectionContent !== existingRecapContent) {
       const recap = existingRecap
-        ? { ...existingRecap, content: monthRecapContent, updatedAt: new Date().toISOString(), version: existingRecap.version + 1 }
-        : makeMonthRecap(currentMonthKey, monthRecapContent);
-      await saveMonthRecap(recap);
-      setMonthRecaps((current) => [...current.filter((r) => r.month !== currentMonthKey), recap]);
-      setMonthRecapSaveState('saved');
+        ? { ...existingRecap, content: monthReflectionContent, updatedAt: new Date().toISOString(), version: existingRecap.version + 1 }
+        : makeMonthReflection(currentMonthKey, monthReflectionContent);
+      await saveMonthReflection(recap);
+      setMonthReflections((current) => [...current.filter((r) => r.month !== currentMonthKey), recap]);
+      setMonthReflectionSaveState('saved');
     }
 
     await syncWithServer();
@@ -374,14 +489,65 @@ function JournalApp({ userId }: { userId: string }) {
     window.setTimeout(() => setSaveFeedback(null), 2500);
   };
 
-  const downloadExport = (format: 'markdown' | 'text') => {
-    const blob = new Blob([format === 'markdown' || format === 'text' ? exportAll(entries, monthRecaps, format) : exportEntries(entries, format)], { type: 'text/plain;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `munimuni-export.${format === 'markdown' ? 'md' : 'txt'}`;
-    link.click();
-    URL.revokeObjectURL(url);
+  const openHistory = () => {
+    setVersions(listVersions(selectedDate));
+    setHistoryOpen(true);
+    setVersionRefreshKey((k) => k + 1);
+  };
+
+  const handleSaveVersion = () => {
+    saveVersion(selectedDate, content);
+    setVersions(listVersions(selectedDate));
+    setVersionRefreshKey((k) => k + 1);
+    setSaveFeedback('Version saved');
+    window.setTimeout(() => setSaveFeedback(null), 2000);
+  };
+
+  const handleRestoreVersion = (versionContent: string) => {
+    setContent(versionContent);
+    setHistoryOpen(false);
+    setSaveFeedback('Version restored');
+    window.setTimeout(() => setSaveFeedback(null), 2000);
+  };
+
+  const handleDeleteVersion = (index: number) => {
+    deleteVersion(selectedDate, index);
+    setVersions(listVersions(selectedDate));
+    setVersionRefreshKey((k) => k + 1);
+  };
+
+  const downloadExport = (format: 'markdown' | 'text', type: 'day' | 'month' | 'year' | 'full' = 'full') => {
+    let content = '';
+    let filename = 'munimuni-export';
+    
+    switch (type) {
+      case 'day': {
+        const entry = entries.find((e) => e.date === selectedDate);
+        content = exportDay(entry, format);
+        filename = selectedDate;
+        break;
+      }
+      case 'month': {
+        content = exportMonth(entries, monthReflectionForCurrentMonth, currentMonthKey, format);
+        filename = currentMonthKey;
+        break;
+      }
+      case 'year': {
+        content = exportYear(entries, monthReflections, yearReflectionForCurrentYear, currentYearKey, format);
+        filename = currentYearKey;
+        break;
+      }
+      case 'full':
+      default: {
+        content = exportAll(entries, monthReflections, yearReflections, format);
+        filename = 'munimuni-export';
+        break;
+      }
+    }
+    
+    if (content) {
+      downloadExportFile(content, filename, format);
+    }
   };
 
   const displayedDate = parseDateKey(selectedDate);
@@ -398,9 +564,34 @@ function JournalApp({ userId }: { userId: string }) {
           <LogoMark /> munimuni
         </button>
         <div className="topbar-actions">
-          <span className="sync-status"><span className={`status-dot ${syncState === 'syncing' ? 'syncing' : saveState === 'saving' ? 'saving' : syncState}`} />{saveState === 'saving' ? 'Saving locally' : syncState === 'syncing' ? 'Syncing securely' : syncState === 'offline' ? 'Saved locally' : syncState === 'pending' ? 'Waiting to sync' : 'Synced securely'}</span>
-          <button className="icon-button" onClick={() => setSettingsOpen((open) => !open)} aria-label="Open settings">☼</button>
-          <button className="avatar" onClick={() => void authClient.signOut().then(() => window.location.assign('/'))} aria-label="Sign out">M</button>
+          <span className="sync-status" data-tooltip="Syncs automatically when online"><span className={`status-dot ${syncState === 'syncing' ? 'syncing' : saveState === 'saving' ? 'saving' : syncState}`} />{saveState === 'saving' ? 'Saving locally' : syncState === 'syncing' ? 'Syncing securely' : syncState === 'offline' ? 'Saved locally' : syncState === 'pending' ? 'Waiting to sync' : 'Synced securely'}</span>
+          <div className="user-menu-container" ref={userMenuRef}>
+            <button className="avatar" onClick={() => setUserMenuOpen((open) => !open)} aria-label="Account & settings" aria-expanded={userMenuOpen}>
+              {getUserInitials(session?.user?.name)}
+            </button>
+            {userMenuOpen && (
+              <div className="user-menu">
+                <div className="user-menu-header">
+                  <span className="user-menu-name">{session?.user?.name ?? 'Journal'}</span>
+                  <span className="user-menu-email">{session?.user?.email ?? ''}</span>
+                </div>
+                <div className="user-menu-divider" />
+                <button className="user-menu-item" onClick={() => { setSettingsOpen(true); setUserMenuOpen(false); }}>
+                  <span>Settings</span>
+                  <span className="user-menu-shortcut">☰</span>
+                </button>
+                <button className="user-menu-item" onClick={() => { downloadExport('markdown'); setUserMenuOpen(false); }}>
+                  <span>Export data</span>
+                  <span className="user-menu-shortcut">↗</span>
+                </button>
+                <div className="user-menu-divider" />
+                <button className="user-menu-item user-menu-danger" onClick={() => void authClient.signOut().then(() => window.location.assign('/'))}>
+                  <span>Sign out</span>
+                  <span className="user-menu-shortcut">→</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -417,20 +608,38 @@ function JournalApp({ userId }: { userId: string }) {
             </div>
           </div>
 
-          <div className="month-recap">
-            <div className="month-recap-header">
-              <span className="recap-icon" aria-hidden="true"><CalendarBlankIcon /></span>
-              <p className="recap-label">Monthly recap</p>
-              <span className="recap-status">{monthRecapSaveState === 'saving' ? 'Saving...' : monthRecapContent.trim() ? `${countWords(monthRecapContent)} words` : 'A quiet summary'}</span>
+          <div className="month-reflection-card" onClick={() => setEditorMode('month-reflection')} data-tooltip="Write a monthly reflection">
+            <div className="month-reflection-card-header">
+              <span className="reflection-icon" aria-hidden="true"><CalendarBlankIcon /></span>
+              <p className="reflection-label">{formatMonth(month)} reflection</p>
             </div>
-            <textarea
-              ref={monthRecapRef}
-              value={monthRecapContent}
-              onChange={(event) => setMonthRecapContent(event.target.value)}
-              placeholder={`What shaped ${formatMonth(month)}?`}
-              aria-label={`Monthly recap for ${formatMonth(month)}`}
-              rows={3}
-            />
+            <div className="month-reflection-card-body">
+              {monthReflectionContent.trim() ? (
+                <>
+                  <span className="reflection-word-count">{countWords(monthReflectionContent)} words</span>
+                  <p className="reflection-preview">{monthReflectionContent.slice(0, 80)}{monthReflectionContent.length > 80 ? '...' : ''}</p>
+                </>
+              ) : (
+                <p className="reflection-placeholder">Write your monthly reflection...</p>
+              )}
+            </div>
+          </div>
+
+          <div className="year-reflection-card" onClick={() => setEditorMode('year-reflection')} data-tooltip="Write a yearly reflection">
+            <div className="year-reflection-card-header">
+              <span className="reflection-icon" aria-hidden="true"><CalendarBlankIcon /></span>
+              <p className="reflection-label">{new Date().getFullYear()} reflection</p>
+            </div>
+            <div className="year-reflection-card-body">
+              {yearReflectionContent.trim() ? (
+                <>
+                  <span className="reflection-word-count">{countWords(yearReflectionContent)} words</span>
+                  <p className="reflection-preview">{yearReflectionContent.slice(0, 80)}{yearReflectionContent.length > 80 ? '...' : ''}</p>
+                </>
+              ) : (
+                <p className="reflection-placeholder">Write your yearly reflection...</p>
+              )}
+            </div>
           </div>
 
           <button className="today-button" onClick={() => { setMonth(new Date(new Date().getFullYear(), new Date().getMonth(), 1)); selectDate(today); }}>Return to today <span>⌘ T</span></button>
@@ -439,7 +648,7 @@ function JournalApp({ userId }: { userId: string }) {
             {calendarDays.map((day, index) => {
               if (!day) return <span className="calendar-day empty" key={`empty-${index}`} />;
               const date = toDateKey(new Date(month.getFullYear(), month.getMonth(), day));
-              return <button className={`calendar-day ${date === selectedDate ? 'selected' : ''} ${date === today ? 'today' : ''}`} key={date} onClick={() => selectDate(date)}>{day}{entryDates.has(date) && <i />}</button>;
+              return <button className={`calendar-day ${date === selectedDate ? 'selected' : ''} ${date === today ? 'today' : ''}`} key={date} onClick={() => selectDate(date)}>{day}{entryDates.has(date) && <i data-tooltip="Entry written" />}</button>;
             })}
           </div>
           <div className="calendar-note"><span className="legend-dot" /> days with entries</div>
@@ -447,46 +656,141 @@ function JournalApp({ userId }: { userId: string }) {
 
         <section className="editor-area">
           <div className="mobile-toolbar">
-            <button onClick={() => setCalendarOpen((open) => !open)}>☷ <span>Calendar</span></button>
-            <button onClick={() => selectDate(today)}>Today</button>
+            {editorMode !== 'daily' ? (
+              <button onClick={() => setEditorMode('daily')}>← <span>Back</span></button>
+            ) : (
+              <>
+                <button onClick={() => setCalendarOpen((open) => !open)}>☷ <span>Calendar</span></button>
+                <button onClick={() => selectDate(today)}>Today</button>
+              </>
+            )}
           </div>
-          <div className="entry-header">
-            <button className="date-nav" onClick={() => selectDate(previousDay)} aria-label="Previous day">←</button>
-            <button className="date-title" onClick={() => setCalendarOpen(true)}>
-              <span className="date-label">{selectedDate === today ? 'Today' : 'Journal entry'}</span>
-              <h1>{formatLongDate(selectedDate)}</h1>
-            </button>
-            <button className="date-nav" onClick={() => selectDate(nextDay)} aria-label="Next day">→</button>
-          </div>
-          <div className="paper-wrap">
-            <div className="editor-toolbar" aria-label="Editor status">
-              <span>Plain text</span>
-              <div className="editor-toolbar-actions">
-                <span className="toolbar-status">{saveState === 'saving' ? 'Saving...' : hasLocalBackupForSelected ? 'Backup available' : 'Saved on this device'}</span>
-                {saveFeedback && <span className="save-feedback" role="status">{saveFeedback}</span>}
-                <button className="save-button" onClick={handleManualSave} title="Save locally" aria-label="Save locally">
-                  <FloppyDiskIcon />
-                  <span>Save</span>
+          
+          {editorMode === 'daily' ? (
+            <>
+              <div className="entry-header">
+                <button className="date-nav" onClick={() => selectDate(previousDay)} aria-label="Previous day">←</button>
+                <button className="date-title" onClick={() => setCalendarOpen(true)}>
+                  <span className="date-label">{selectedDate === today ? 'Today' : 'Journal entry'}</span>
+                  <h1>{formatLongDate(selectedDate)}</h1>
                 </button>
-                <button className="sync-button" onClick={() => void handleManualSync()} title="Sync now" aria-label="Sync now" disabled={syncState === 'syncing'}>
-                  <ArrowsClockwiseIcon spinning={syncState === 'syncing'} />
-                  <span>{syncState === 'syncing' ? 'Syncing' : 'Sync'}</span>
-                </button>
+                <button className="date-nav" onClick={() => selectDate(nextDay)} aria-label="Next day">→</button>
               </div>
-            </div>
-            <textarea
-              ref={editorRef}
-              className="editor"
-              value={content}
-              onChange={(event) => setContent(event.target.value)}
-              placeholder="Begin wherever you are…"
-              aria-label={`Journal entry for ${formatLongDate(selectedDate)}`}
-              spellCheck="true"
-              autoFocus
-            />
-            <div className="paper-footer"><span>{countWords(content)} {countWords(content) === 1 ? 'word' : 'words'}</span><span>{entryForDate ? 'Private to you' : 'A blank page'}</span></div>
-          </div>
-          <p className="closing-note">No need to write every day. The page will be here when you are.</p>
+              <div className="paper-wrap">
+                <div className="editor-toolbar" aria-label="Editor status">
+                  <span>Plain text</span>
+                  <div className="editor-toolbar-actions">
+                    <span className="toolbar-status">{saveState === 'saving' ? 'Saving...' : hasLocalBackupForSelected ? 'Backup available' : 'Saved on this device'}</span>
+                    {saveFeedback && <span className="save-feedback" role="status">{saveFeedback}</span>}
+                    <button className="history-button" onClick={openHistory} data-tooltip="Browse previous versions" title="Version history" aria-label="Version history">
+                      <HistoryIcon />
+                      {getVersionCount(selectedDate) > 0 && <span className="history-count">{getVersionCount(selectedDate)}</span>}
+                    </button>
+                    <button className="save-button" onClick={handleManualSave} data-tooltip="Save a local backup on this device" title="Save locally" aria-label="Save locally">
+                      <FloppyDiskIcon />
+                      <span>Save</span>
+                    </button>
+                    <button className="sync-button" onClick={() => void handleManualSync()} data-tooltip="Upload pending changes to the cloud" title="Sync now" aria-label="Sync now" disabled={syncState === 'syncing'}>
+                      <ArrowsClockwiseIcon spinning={syncState === 'syncing'} />
+                      <span>{syncState === 'syncing' ? 'Syncing' : 'Sync'}</span>
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  ref={editorRef}
+                  className="editor"
+                  value={content}
+                  onChange={(event) => setContent(event.target.value)}
+                  placeholder="Begin wherever you are…"
+                  aria-label={`Journal entry for ${formatLongDate(selectedDate)}`}
+                  spellCheck="true"
+                  autoFocus
+                />
+                <div className="paper-footer"><span>{countWords(content)} {countWords(content) === 1 ? 'word' : 'words'}</span><span>{entryForDate ? 'Private to you' : 'A blank page'}</span></div>
+              </div>
+              <p className="closing-note">No need to write every day. The page will be here when you are.</p>
+            </>
+          ) : editorMode === 'month-reflection' ? (
+            <>
+              <div className="entry-header">
+                <button className="date-nav" onClick={() => setEditorMode('daily')} aria-label="Back to daily entry">←</button>
+                <div className="date-title">
+                  <span className="date-label">Monthly reflection</span>
+                  <h1>{formatMonth(month)}</h1>
+                </div>
+                <span className="date-nav" />
+              </div>
+              <div className="paper-wrap">
+                <div className="editor-toolbar" aria-label="Editor status">
+                  <span>Plain text</span>
+                  <div className="editor-toolbar-actions">
+                    <span className="toolbar-status">{monthReflectionSaveState === 'saving' ? 'Saving...' : 'Saved on this device'}</span>
+                    {saveFeedback && <span className="save-feedback" role="status">{saveFeedback}</span>}
+                    <button className="save-button" onClick={() => { saveMonthReflection(makeMonthReflection(currentMonthKey, monthReflectionContent)); }} data-tooltip="Save a local backup on this device" title="Save locally" aria-label="Save locally">
+                      <FloppyDiskIcon />
+                      <span>Save</span>
+                    </button>
+                    <button className="sync-button" onClick={() => void handleManualSync()} data-tooltip="Upload pending changes to the cloud" title="Sync now" aria-label="Sync now" disabled={syncState === 'syncing'}>
+                      <ArrowsClockwiseIcon spinning={syncState === 'syncing'} />
+                      <span>{syncState === 'syncing' ? 'Syncing' : 'Sync'}</span>
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  ref={monthReflectionRef}
+                  className="editor"
+                  value={monthReflectionContent}
+                  onChange={(event) => setMonthReflectionContent(event.target.value)}
+                  placeholder={`What shaped ${formatMonth(month)}?`}
+                  aria-label={`Monthly reflection for ${formatMonth(month)}`}
+                  spellCheck="true"
+                  autoFocus
+                />
+                <div className="paper-footer"><span>{countWords(monthReflectionContent)} {countWords(monthReflectionContent) === 1 ? 'word' : 'words'}</span><span>Private to you</span></div>
+              </div>
+              <p className="closing-note">A month in review, just for you.</p>
+            </>
+          ) : (
+            <>
+              <div className="entry-header">
+                <button className="date-nav" onClick={() => setEditorMode('daily')} aria-label="Back to daily entry">←</button>
+                <div className="date-title">
+                  <span className="date-label">Yearly reflection</span>
+                  <h1>{new Date().getFullYear()}</h1>
+                </div>
+                <span className="date-nav" />
+              </div>
+              <div className="paper-wrap">
+                <div className="editor-toolbar" aria-label="Editor status">
+                  <span>Plain text</span>
+                  <div className="editor-toolbar-actions">
+                    <span className="toolbar-status">{yearReflectionSaveState === 'saving' ? 'Saving...' : 'Saved on this device'}</span>
+                    {saveFeedback && <span className="save-feedback" role="status">{saveFeedback}</span>}
+                    <button className="save-button" onClick={() => { saveYearReflection(makeYearReflection(currentYearKey, yearReflectionContent)); }} data-tooltip="Save a local backup on this device" title="Save locally" aria-label="Save locally">
+                      <FloppyDiskIcon />
+                      <span>Save</span>
+                    </button>
+                    <button className="sync-button" onClick={() => void handleManualSync()} data-tooltip="Upload pending changes to the cloud" title="Sync now" aria-label="Sync now" disabled={syncState === 'syncing'}>
+                      <ArrowsClockwiseIcon spinning={syncState === 'syncing'} />
+                      <span>{syncState === 'syncing' ? 'Syncing' : 'Sync'}</span>
+                    </button>
+                  </div>
+                </div>
+                <textarea
+                  ref={monthReflectionRef}
+                  className="editor"
+                  value={yearReflectionContent}
+                  onChange={(event) => setYearReflectionContent(event.target.value)}
+                  placeholder={`What defined ${new Date().getFullYear()}?`}
+                  aria-label={`Yearly reflection for ${new Date().getFullYear()}`}
+                  spellCheck="true"
+                  autoFocus
+                />
+                <div className="paper-footer"><span>{countWords(yearReflectionContent)} {countWords(yearReflectionContent) === 1 ? 'word' : 'words'}</span><span>Private to you</span></div>
+              </div>
+              <p className="closing-note">A year in review, just for you.</p>
+            </>
+          )}
         </section>
 
         {settingsOpen && <aside className="settings-panel">
@@ -499,8 +803,14 @@ function JournalApp({ userId }: { userId: string }) {
           <SettingGroup label="Writing size"><div className="size-list">{(['small', 'medium', 'large'] as WritingSize[]).map((value) => <button className={writingSize === value ? 'active' : ''} key={value} onClick={() => setWritingSize(value)}>{value[0].toUpperCase() + value.slice(1)}</button>)}</div></SettingGroup>
           <SettingGroup label="Data">
             <div className="export-list">
-              <button onClick={() => downloadExport('markdown')}>Export Markdown <span>↗</span></button>
-              <button onClick={() => downloadExport('text')}>Export plain text <span>↗</span></button>
+              <button onClick={() => downloadExport('markdown', 'day')}>Export today (Markdown) <span>↗</span></button>
+              <button onClick={() => downloadExport('text', 'day')}>Export today (Text) <span>↗</span></button>
+              <button onClick={() => downloadExport('markdown', 'month')}>Export month (Markdown) <span>↗</span></button>
+              <button onClick={() => downloadExport('text', 'month')}>Export month (Text) <span>↗</span></button>
+              <button onClick={() => downloadExport('markdown', 'year')}>Export year (Markdown) <span>↗</span></button>
+              <button onClick={() => downloadExport('text', 'year')}>Export year (Text) <span>↗</span></button>
+              <button onClick={() => downloadExport('markdown', 'full')}>Export all (Markdown) <span>↗</span></button>
+              <button onClick={() => downloadExport('text', 'full')}>Export all (Text) <span>↗</span></button>
             </div>
             <div className="local-backup-section">
               <div className="backup-header">
@@ -531,28 +841,65 @@ function JournalApp({ userId }: { userId: string }) {
               )}
             </div>
           </SettingGroup>
-          <SettingGroup label="Account">
+          <SettingGroup label="Sync">
             <div className="account-card">
               <div className="account-status">
                 <div className="account-user-info">
-                  <span className="account-user-name">Personal Journal</span>
+                  <span className="account-user-name">Cloud sync</span>
                   <span className="account-sync-badge">
                     <span className={`status-dot ${syncState === 'syncing' ? 'syncing' : syncState === 'pending' ? 'pending' : 'saving'}`} /> {syncState === 'syncing' ? 'Syncing' : syncState === 'offline' ? 'Offline - saved locally' : 'Cloud sync active'}
                   </span>
                 </div>
               </div>
-              <button
-                type="button"
-                className="signout-button"
-                onClick={() => void authClient.signOut().then(() => window.location.assign('/'))}
-              >
-                <span>Log out</span>
-                <span>→</span>
-              </button>
             </div>
           </SettingGroup>
-          <p className="settings-footnote">Your entries are saved on this device first, then synced securely when you are signed in. Monthly recaps are saved per month and included in exports.</p>
+          <p className="settings-footnote">Your entries are saved on this device first, then synced securely when you are signed in. Monthly reflections are saved per month and included in exports.</p>
         </aside>}
+
+        {historyOpen && editorMode === 'daily' && (
+          <aside className="history-panel">
+            <div className="settings-title">
+              <div>
+                <p className="eyebrow">Version history</p>
+                <h2>{selectedDate}</h2>
+              </div>
+              <button className="close-button" onClick={() => setHistoryOpen(false)} aria-label="Close version history">×</button>
+            </div>
+            <div className="history-actions">
+              <button className="primary-button" onClick={handleSaveVersion}>
+                Save current version
+              </button>
+            </div>
+            {versions.length === 0 ? (
+              <p className="history-empty">No saved versions yet. Click "Save current version" to create a snapshot.</p>
+            ) : (
+              <div className="history-list">
+                {versions.map((version, index) => {
+                  const wordCount = version.content.trim() ? version.content.trim().split(/\s+/).length : 0;
+                  const date = new Date(version.timestamp);
+                  const timeAgo = getTimeAgo(date);
+                  return (
+                    <div className="history-item" key={version.timestamp}>
+                      <div className="history-item-header">
+                        <span className="history-item-time">{timeAgo}</span>
+                        <span className="history-item-words">{wordCount} words</span>
+                      </div>
+                      <p className="history-item-preview">{version.content.slice(0, 120)}{version.content.length > 120 ? '...' : ''}</p>
+                      <div className="history-item-actions">
+                        <button className="history-restore" onClick={() => handleRestoreVersion(version.content)}>
+                          Restore
+                        </button>
+                        <button className="history-delete" onClick={() => handleDeleteVersion(index)}>
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </aside>
+        )}
       </main>
       <nav className="mobile-nav"><button className={!calendarOpen ? 'active' : ''} onClick={() => { setCalendarOpen(false); selectDate(today); }}>Today</button><button className={calendarOpen ? 'active' : ''} onClick={() => setCalendarOpen(true)}>Calendar</button><button className={settingsOpen ? 'active' : ''} onClick={() => setSettingsOpen((open) => !open)}>Settings</button></nav>
     </div>
