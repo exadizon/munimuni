@@ -786,3 +786,249 @@
   background: color-mix(in srgb, #d87878 12%, transparent);
   color: #d87878;
 }
+
+/* Month recap - stable long-term component */
+.month-recap {
+  margin: 20px 0 18px;
+  padding: 14px 14px 12px;
+  border: 1px solid var(--faint);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--panel) 72%, var(--bg));
+}
+.month-recap-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.recap-icon {
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+.recap-label {
+  margin: 0;
+  flex: 1;
+  color: var(--muted);
+  font: 10px 'DM Mono', monospace;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+.recap-status {
+  color: var(--muted);
+  font: 10px 'DM Mono', monospace;
+  white-space: nowrap;
+}
+.month-recap textarea {
+  width: 100%;
+  min-height: 72px;
+  max-height: 200px;
+  resize: vertical;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink);
+  font: 400 13px/1.6 'Newsreader', serif;
+  padding: 8px 0;
+  outline: 0;
+  overflow: auto;
+  transition: background .15s ease, border-color .15s ease, padding .15s ease;
+}
+.month-recap textarea::placeholder {
+  color: var(--muted);
+  opacity: .75;
+}
+.month-recap textarea:focus {
+  border-color: var(--faint);
+  background: var(--bg);
+  padding: 8px 10px;
+}
+.month-recap textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Editor toolbar - stable save/sync with Phosphor icons */
+.editor-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 0 0 16px;
+  color: var(--muted);
+  font: 10px 'DM Mono', monospace;
+  letter-spacing: .03em;
+}
+.editor-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toolbar-status {
+  color: var(--muted);
+  font: 10px 'DM Mono', monospace;
+  margin-right: 4px;
+}
+.save-feedback {
+  color: var(--accent);
+  font: 10px 'DM Mono', monospace;
+  animation: fadeIn .2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.editor-toolbar button.save-button,
+.editor-toolbar button.sync-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: 1px solid var(--faint);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--muted);
+  font: 10px 'DM Mono', monospace;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, color .15s ease;
+}
+.editor-toolbar button.save-button {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--faint));
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+.editor-toolbar button.save-button:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.editor-toolbar button.sync-button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.editor-toolbar button.sync-button:disabled {
+  opacity: .6;
+  cursor: wait;
+}
+.editor-toolbar button svg {
+  flex-shrink: 0;
+}
+
+/* Fix editor overflow for mobile keyboard */
+.editor {
+  overflow: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.paper-wrap {
+  overflow: visible;
+}
+
+/* Local backup section in settings */
+.local-backup-section {
+  margin-top: 18px;
+  padding: 16px;
+  border: 1px solid var(--faint);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--panel) 60%, var(--bg));
+}
+.backup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.backup-title {
+  font: 500 11px 'DM Mono', monospace;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.backup-count {
+  font: 10px 'DM Mono', monospace;
+  color: var(--muted);
+}
+.backup-desc {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font: 11px/1.5 'DM Mono', monospace;
+}
+.backup-empty {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px dashed var(--faint);
+  border-radius: 3px;
+  color: var(--muted);
+  font: 11px 'DM Mono', monospace;
+  text-align: center;
+}
+.backup-list {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.backup-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--faint);
+  border-radius: 3px;
+  background: var(--bg);
+}
+.backup-item-info {
+  display: grid;
+  gap: 2px;
+}
+.backup-date {
+  font: 11px 'DM Mono', monospace;
+  color: var(--ink);
+}
+.backup-time {
+  font: 10px 'DM Mono', monospace;
+  color: var(--muted);
+}
+.backup-restore {
+  padding: 6px 10px;
+  border: 1px solid var(--faint);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--accent);
+  font: 10px 'DM Mono', monospace;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.backup-restore:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.backup-current {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--faint));
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg));
+  font: 11px 'DM Mono', monospace;
+  color: var(--muted);
+}
+.backup-current span {
+  flex: 1;
+}
+
+@media (max-width: 720px) {
+  .month-recap {
+    margin: 16px 0 14px;
+    padding: 12px 12px 10px;
+  }
+  .editor-toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .editor-toolbar-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
