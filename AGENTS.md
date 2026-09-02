@@ -12,3 +12,14 @@
 - This makes sure you find the real problem so your fix will actually solve it.
 - When end-to-end testing a product, be picky about the UI you see and be obsessed with pixel perfection. If something clearly looks off, even if it is not directly related to what you are doing, try to get it fixed along the way.
 - Apply that same high standard to engineering excellence: lint, test failures, and test flakiness. If you see one, even if it is not caused by what you are working on right now, still get it fixed.
+
+## Test account (E2E / manual checks - isolated from personal data by user_id)
+
+- Email: test@munimuni.test
+- Password: MunimuniTest123!@#
+- Name: Test Journal
+- Created via `npm run seed:test-account` (checks `neon_auth."user"` and inserts `profiles` if missing) - requires `TEST_ACCOUNT_EMAIL` to contain `test` as guard
+- Reset server data only: `npm run reset:test-account` (deletes `journal_entries`, `month_reflections`, `profiles` for that user_id)
+- Sign in at `/auth/sign-in` - onboarding is auto-skipped if profile exists, otherwise complete display name / timezone
+- Isolation: RLS per `user_id` in `journal_entries` and `month_reflections` - personal journal is untouched
+- Env vars in `.env.local` and `apps/web/.env.local`: `TEST_ACCOUNT_EMAIL`, `TEST_ACCOUNT_PASSWORD`, `TEST_ACCOUNT_NAME`
