@@ -12,6 +12,8 @@
     "build": "npm --workspace @munimuni/web run build",
     "test": "npm --workspace @munimuni/core run test",
     "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
+    "seed:test-account": "node --env-file=.env.local scripts/seed-test-account.mjs",
+    "reset:test-account": "node --env-file=.env.local scripts/reset-test-account.mjs",
     "dev:desktop": "npm --workspace @munimuni/desktop run tauri dev",
     "build:desktop": "npm --workspace @munimuni/desktop run tauri build"
   },
