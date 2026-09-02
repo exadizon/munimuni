@@ -51,7 +51,7 @@ export const makeEntry = (date: string, content = ''): JournalEntry => {
   };
 };
 
-export interface MonthRecap {
+export interface MonthReflection {
   id: string;
   month: string;
   content: string;
@@ -71,11 +71,41 @@ export const parseMonthKey = (key: string): Date => {
   return new Date(year, month - 1, 1);
 };
 
-export const makeMonthRecap = (month: string, content = ''): MonthRecap => {
+export const makeMonthReflection = (month: string, content = ''): MonthReflection => {
   const now = new Date().toISOString();
   return {
     id: crypto.randomUUID(),
     month,
+    content,
+    createdAt: now,
+    updatedAt: now,
+    version: 1,
+  };
+};
+
+export interface YearReflection {
+  id: string;
+  year: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  version: number;
+}
+
+export const toYearKey = (date: Date): string => {
+  return `${date.getFullYear()}`;
+};
+
+export const parseYearKey = (key: string): Date => {
+  const year = Number(key);
+  return new Date(year, 0, 1);
+};
+
+export const makeYearReflection = (year: string, content = ''): YearReflection => {
+  const now = new Date().toISOString();
+  return {
+    id: crypto.randomUUID(),
+    year,
     content,
     createdAt: now,
     updatedAt: now,

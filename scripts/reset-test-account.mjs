@@ -26,7 +26,8 @@ const userId = users[0].id;
 console.log(`Resetting data for test account ${TEST_EMAIL} (${userId}) ...`);
 
 let deletedEntries = 0;
-let deletedRecaps = 0;
+let deletedMonthReflections = 0;
+let deletedYearReflections = 0;
 let deletedProfiles = 0;
 
 try {
@@ -38,11 +39,19 @@ try {
 }
 
 try {
-  const r = await sql`DELETE FROM month_recaps WHERE user_id = ${userId}`;
-  deletedRecaps = r.count ?? 0;
-  console.log(` - month_recaps: ${deletedRecaps} rows deleted`);
+  const r = await sql`DELETE FROM month_reflections WHERE user_id = ${userId}`;
+  deletedMonthReflections = r.count ?? 0;
+  console.log(` - month_reflections: ${deletedMonthReflections} rows deleted`);
 } catch (e) {
-  console.log(` - month_recaps: skipped (table may not exist yet)`);
+  console.log(` - month_reflections: skipped (table may not exist yet)`);
+}
+
+try {
+  const r = await sql`DELETE FROM year_reflections WHERE user_id = ${userId}`;
+  deletedYearReflections = r.count ?? 0;
+  console.log(` - year_reflections: ${deletedYearReflections} rows deleted`);
+} catch (e) {
+  console.log(` - year_reflections: skipped (table may not exist yet)`);
 }
 
 try {
