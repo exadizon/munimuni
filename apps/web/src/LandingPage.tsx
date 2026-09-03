@@ -66,6 +66,7 @@ export function LandingPage({ initialAuthMode = 'sign-in' }: { initialAuthMode?:
             <button type="button" onClick={() => scrollToSection('features')}>Principles</button>
             <button type="button" onClick={() => scrollToSection('sync')}>Sync & Privacy</button>
             <button type="button" onClick={() => scrollToSection('typography')}>Typography</button>
+            <button type="button" onClick={() => scrollToSection('download')}>Apps</button>
           </nav>
 
           <div className="landing-nav-actions">
@@ -501,6 +502,86 @@ export function LandingPage({ initialAuthMode = 'sign-in' }: { initialAuthMode?:
         </div>
       </section>
 
+      {/* Get the Apps */}
+      <section className="landing-section landing-download-section" id="download">
+        <div className="landing-section-header">
+          <p className="eyebrow">Take it with you</p>
+          <h2>Your journal, on every device.</h2>
+          <p className="landing-section-desc">
+            The web app is the source of truth - desktop and mobile match it, release for release.
+          </p>
+        </div>
+
+        <div className="landing-feature-grid">
+          <div className="feature-card">
+            <div>
+              <p className="feature-icon" aria-hidden="true">◍</p>
+              <h3>Web app</h3>
+              <p>
+                The full journal right in your browser. Installable as an app, usable offline,
+                and synced securely when you sign in.
+              </p>
+            </div>
+            <div>
+              <span className="feature-tag">PWA - always current</span>
+              <div className="banner-actions" style={{ marginTop: 16, marginBottom: 0 }}>
+                <button type="button" className="landing-secondary-button" onClick={() => scrollToSection('auth')}>
+                  Open the web app <span aria-hidden="true">→</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="feature-card">
+            <div>
+              <p className="feature-icon" aria-hidden="true">▣</p>
+              <h3>Desktop app</h3>
+              <p>
+                Native Windows, macOS, and Linux builds. The same quiet editor,
+                with entries saved on your device first.
+              </p>
+            </div>
+            <div>
+              <span className="feature-tag">Tauri - per release</span>
+              <div className="banner-actions" style={{ marginTop: 16, marginBottom: 0 }}>
+                <a
+                  className="landing-secondary-button"
+                  href="https://github.com/exadizon/munimuni/releases"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Download for desktop <span aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="feature-card">
+            <div>
+              <p className="feature-icon" aria-hidden="true">▤</p>
+              <h3>Mobile app</h3>
+              <p>
+                iOS and Android builds for writing anywhere. The same plaintext entries,
+                the same private-by-default promise.
+              </p>
+            </div>
+            <div>
+              <span className="feature-tag">Expo - per release</span>
+              <div className="banner-actions" style={{ marginTop: 16, marginBottom: 0 }}>
+                <a
+                  className="landing-secondary-button"
+                  href="https://github.com/exadizon/munimuni/releases"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Download for mobile <span aria-hidden="true">↗</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Pre-Footer Call to Action */}
       <section className="landing-cta-banner">
         <div className="landing-cta-banner-inner">
@@ -554,6 +635,7 @@ export function LandingPage({ initialAuthMode = 'sign-in' }: { initialAuthMode?:
               <li><button type="button" onClick={() => scrollToSection('features')}>Design Principles</button></li>
               <li><button type="button" onClick={() => scrollToSection('sync')}>Sync Architecture</button></li>
               <li><button type="button" onClick={() => scrollToSection('typography')}>Typography Modes</button></li>
+              <li><button type="button" onClick={() => scrollToSection('download')}>Get the Apps</button></li>
             </ul>
           </div>
 
