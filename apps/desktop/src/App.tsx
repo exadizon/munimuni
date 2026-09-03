@@ -1,4 +1,5 @@
 import { LogoMark } from './Logo';
+import LoadingScreen from './LoadingScreen';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   countWords,
@@ -421,7 +422,7 @@ function OnboardingScreen({ onComplete }: { onComplete: (profile: Profile) => vo
     <main className="auth-screen onboarding-screen">
       <div className="auth-card">
         <div className="auth-brand">
-          <span className="wordmark-mark">m</span>
+          <LogoMark />
           <span>munimuni</span>
         </div>
         <p className="eyebrow">Before your first page</p>
@@ -462,7 +463,7 @@ function App() {
     setProfile(getStoredProfile());
   }, []);
 
-  if (profile === undefined) return <div className="auth-loading">Opening your journal…</div>;
+  if (profile === undefined) return <LoadingScreen message="Opening your journal…" />;
   if (!profile) return <OnboardingScreen onComplete={setProfile} />;
   return <JournalApp profile={profile} />;
 }

@@ -2,13 +2,57 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri + React + Typescript</title>
+    <meta name="theme-color" content="#151916" />
+    <meta name="description" content="Munimuni - A quiet place for your thoughts." />
+    <title>Munimuni</title>
+    <style>
+      html, body { margin: 0; background: #151916; }
+      #root:not(:empty) + #boot-splash { display: none; }
+      #boot-splash {
+        min-height: 100vh; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 18px;
+        background: #151916; text-align: center;
+      }
+      #boot-splash .tile {
+        width: 76px; height: 76px; display: grid; place-items: center;
+        border-radius: 19px; background: #1d221e;
+      }
+      #boot-splash .tile svg { width: 52px; height: 52px; display: block; }
+      #boot-splash .word { margin: 0; color: #f1eee5; font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 22px; }
+      #boot-splash .msg { margin: 0; color: #bcc3b8; font: 11px monospace; letter-spacing: .04em; }
+    </style>
   </head>
 
   <body>
     <div id="root"></div>
+    <div id="boot-splash" aria-hidden="true">
+      <div class="tile">
+        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M13.2 18.2L8.5 20.2L9.6 15.5L17.2 4.2C17.9 3.2 19.3 3.2 20.1 4C20.9 4.8 20.9 6.2 19.9 6.9L13.2 18.2Z" stroke="#e3b66d" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9.6 15.5L13.6 17.2" stroke="#e3b66d" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="13.2" cy="12.2" r="0.9" fill="#e3b66d"/>
+          <path d="M13.2 12.2L8.8 19.2" stroke="#e3b66d" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M5 8.5C5 6.5 4 5.5 2 5.5C4 5.5 5 4.5 5 2.5C5 4.5 6 5.5 8 5.5C6 5.5 5 6.5 5 8.5Z" fill="#f1eee5"/>
+          <path d="M21.5 17.5C21.5 16.2 20.8 15.5 19.5 15.5C20.8 15.5 21.5 14.8 21.5 13.5C21.5 14.8 22.2 15.5 23.5 15.5C22.2 15.5 21.5 16.2 21.5 17.5Z" fill="#f1eee5"/>
+        </svg>
+      </div>
+      <p class="word">munimuni</p>
+      <p class="msg">Opening your journal…</p>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      // Remove the static splash once React mounts.
+      new MutationObserver(function (mutations, observer) {
+        if (document.getElementById('root').childElementCount > 0) {
+          var splash = document.getElementById('boot-splash');
+          if (splash) splash.remove();
+          observer.disconnect();
+        }
+      }).observe(document.getElementById('root'), { childList: true });
+    </script>
   </body>
 </html>
