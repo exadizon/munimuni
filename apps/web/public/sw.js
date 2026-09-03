@@ -1,5 +1,5 @@
-const CACHE_NAME = 'munimuni-shell-v1';
-const APP_SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.svg', '/icons/icon-512.svg', '/icons/maskable-512.svg'];
+const CACHE_NAME = 'munimuni-shell-v2';
+const APP_SHELL = ['/', '/manifest.webmanifest', '/icon.svg', '/apple-touch-icon.png', '/favicon-32x32.png', '/favicon-16x16.png', '/icons/icon-192.png', '/icons/icon-512.png', '/icons/maskable-512.png', '/icons/icon-192.svg', '/icons/icon-512.svg', '/icons/maskable-512.svg'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).then(() => self.skipWaiting()));

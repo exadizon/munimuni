@@ -45,6 +45,7 @@ import {
 } from './storage';
 import { LandingPage } from './LandingPage';
 import { LogoMark } from './Logo';
+import LoadingScreen from './LoadingScreen';
 
 type Appearance = 'system' | 'light' | 'dark';
 type Accent = 'neutral' | 'blue' | 'green' | 'amber' | 'rose' | 'violet';
@@ -925,7 +926,7 @@ type Profile = { displayName: string; timezone: string; completedAt: string };
 function App() {
   const { data: session, isPending } = authClient.useSession();
 
-  if (isPending) return <div className="auth-loading">Opening your journal…</div>;
+  if (isPending) return <LoadingScreen message="Opening your journal…" />;
   if (!session?.user) return <LandingPage />;
   return <AccountBootstrap userId={session.user.id} />;
 }
@@ -940,7 +941,7 @@ function AccountBootstrap({ userId }: { userId: string }) {
       .catch(() => setProfile(null));
   }, [userId]);
 
-  if (profile === undefined) return <div className="auth-loading">Preparing your journal…</div>;
+  if (profile === undefined) return <LoadingScreen message="Preparing your journal…" />;
   if (!profile) return <OnboardingScreen onComplete={setProfile} />;
   return <JournalApp userId={userId} />;
 }
