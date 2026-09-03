@@ -3,11 +3,46 @@
     "name": "Munimuni",
     "slug": "munimuni",
     "version": "0.1.0",
+    "description": "A quiet place for your thoughts.",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "munimuni",
-    "ios": { "supportsTablet": true },
-    "android": { "adaptiveIcon": { "backgroundColor": "#F4F0E8" } },
-    "plugins": ["expo-sharing"]
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "backgroundColor": "#151916",
+      "resizeMode": "contain"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "icon": "./assets/icon.png",
+      "splash": {
+        "image": "./assets/splash-icon.png",
+        "backgroundColor": "#151916",
+        "resizeMode": "contain"
+      }
+    },
+    "android": {
+      "icon": "./assets/icon.png",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#151916"
+      },
+      "splash": {
+        "image": "./assets/splash-icon.png",
+        "backgroundColor": "#151916",
+        "resizeMode": "contain"
+      }
+    },
+    "web": {
+      "name": "Munimuni — private journal",
+      "shortName": "Munimuni",
+      "description": "A quiet place for your thoughts.",
+      "favicon": "./assets/favicon.png",
+      "themeColor": "#151916",
+      "backgroundColor": "#151916",
+      "display": "standalone",
+      "orientation": "portrait"
+    }
   }
 }
