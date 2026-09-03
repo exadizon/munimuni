@@ -1,0 +1,18 @@
+# Self-host Munimuni web anywhere Node 20 runs.
+# Today DATABASE_URL must be a Neon Postgres URL: apps/web uses
+# @neondatabase/serverless (HTTP driver), so vanilla postgres:// will not
+# connect yet. Vanilla support is roadmap (swap lib/db.ts + scripts/migrate.mjs
+# to node-postgres). Copy .env.example to .env and fill the values first.
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env (Neon Postgres URL)}
+      DATABASE_URL_UNPOOLED: ${DATABASE_URL_UNPOOLED:-${DATABASE_URL}}
+      NEON_AUTH_BASE_URL: ${NEON_AUTH_BASE_URL:?Set NEON_AUTH_BASE_URL in .env}
+      NEON_AUTH_COOKIE_SECRET: ${NEON_AUTH_COOKIE_SECRET:?Set NEON_AUTH_COOKIE_SECRET in .env (32+ chars)}
