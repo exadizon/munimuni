@@ -49,6 +49,8 @@ jobs:
           releaseName: "Munimuni ${{ github.ref_name }}"
           releaseBody: "Desktop installers for Munimuni - a quiet place for your thoughts."
           releaseDraft: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload stable-name artifact
         shell: bash
