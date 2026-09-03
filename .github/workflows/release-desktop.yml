@@ -1,0 +1,60 @@
+name: Release desktop
+
+# Builds native installers on version tags (e.g. v0.1.0) and attaches them
+# to the GitHub Release - both the versioned Tauri bundles and stable
+# filenames the website download buttons link to directly.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            stable: Munimuni-Windows-Setup.exe
+            glob: apps/desktop/src-tauri/target/release/bundle/nsis/*-setup.exe
+          - os: macos-latest
+            stable: Munimuni-macOS.dmg
+            glob: apps/desktop/src-tauri/target/release/bundle/dmg/*.dmg
+          - os: ubuntu-22.04
+            stable: Munimuni-Linux.AppImage
+            glob: apps/desktop/src-tauri/target/release/bundle/appimage/*.AppImage
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Linux system dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: tauri-apps/tauri-action@v0
+        with:
+          projectPath: apps/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: "Munimuni ${{ github.ref_name }}"
+          releaseBody: "Desktop installers for Munimuni - a quiet place for your thoughts."
+          releaseDraft: false
+
+      - name: Upload stable-name artifact
+        shell: bash
+        run: |
+          src=$(ls ${{ matrix.glob }} | head -n 1)
+          cp "$src" "${{ matrix.stable }}"
+          gh release upload "${{ github.ref_name }}" "${{ matrix.stable }}" --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}

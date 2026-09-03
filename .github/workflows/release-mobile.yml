@@ -1,0 +1,58 @@
+name: Release mobile
+
+# Builds the Android APK on EAS and attaches it to a GitHub Release under a
+# stable filename the website download button links to directly.
+#
+# One-time setup (needs your Expo account):
+#   1. `npx eas-cli build:configure` in apps/mobile (adds the EAS projectId)
+#   2. Create an Expo access token and save it as the EXPO_TOKEN repo secret
+#   3. Run this workflow (Actions tab -> Release mobile -> Run workflow)
+#
+# iOS builds are intentionally left out: they need Apple signing credentials.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to attach the APK to (must already exist)"
+        required: true
+        default: "v0.1.0"
+      profile:
+        description: "EAS build profile"
+        required: true
+        default: "preview"
+
+permissions:
+  contents: write
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Build APK on EAS
+        working-directory: apps/mobile
+        run: eas build --platform android --profile ${{ inputs.profile }} --non-interactive --json > $RUNNER_TEMP/build.json
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Upload APK to GitHub Release
+        run: |
+          URL=$(node -p "const b = require(process.env.RUNNER_TEMP + '/build.json'); const x = Array.isArray(b) ? b[0] : b; const u = x && x.artifacts && x.artifacts.applicationArchiveUrl; if (!u) { throw new Error('No APK artifact URL in EAS output'); } u")
+          curl -H "Authorization: Bearer $EXPO_TOKEN" -L --fail -o munimuni-android.apk "$URL"
+          gh release upload "${{ inputs.tag }}" munimuni-android.apk --clobber
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}

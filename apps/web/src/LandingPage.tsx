@@ -546,11 +546,9 @@ export function LandingPage({ initialAuthMode = 'sign-in' }: { initialAuthMode?:
               <div className="banner-actions" style={{ marginTop: 16, marginBottom: 0 }}>
                 <a
                   className="landing-secondary-button"
-                  href="https://github.com/exadizon/munimuni/releases"
-                  target="_blank"
-                  rel="noreferrer"
+                  href="https://github.com/exadizon/munimuni/releases/latest/download/Munimuni-Windows-Setup.exe"
                 >
-                  Download for desktop <span aria-hidden="true">↗</span>
+                  Download for desktop <span aria-hidden="true">↓</span>
                 </a>
               </div>
             </div>
@@ -570,16 +568,26 @@ export function LandingPage({ initialAuthMode = 'sign-in' }: { initialAuthMode?:
               <div className="banner-actions" style={{ marginTop: 16, marginBottom: 0 }}>
                 <a
                   className="landing-secondary-button"
-                  href="https://github.com/exadizon/munimuni/releases"
-                  target="_blank"
-                  rel="noreferrer"
+                  href="https://github.com/exadizon/munimuni/releases/latest/download/munimuni-android.apk"
                 >
-                  Download for mobile <span aria-hidden="true">↗</span>
+                  Download for mobile <span aria-hidden="true">↓</span>
                 </a>
               </div>
             </div>
           </div>
         </div>
+        <p className="landing-reassurance" style={{ textAlign: 'center', marginTop: 26 }}>
+          Looking for macOS, Linux, or older versions?{' '}
+          <a
+            href="https://github.com/exadizon/munimuni/releases"
+            target="_blank"
+            rel="noreferrer"
+            style={{ color: 'inherit' }}
+          >
+            Browse all release artifacts
+          </a>
+          .
+        </p>
       </section>
 
       {/* Pre-Footer Call to Action */}
