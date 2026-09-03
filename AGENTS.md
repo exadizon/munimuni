@@ -1,5 +1,5 @@
 # Agent instructions
-
+- Use `gh-axi` for GitHub and `chrome-devtools-axi` for browser automation.
 - Keep commits structured around one coherent change.
 - Never include a `Co-authored-by:` trailer or equivalent co-author attribution in commit messages.
 - Prefer small, maintainable implementations that preserve Munimuni's local-first and plaintext principles.
@@ -12,6 +12,15 @@
 - This makes sure you find the real problem so your fix will actually solve it.
 - When end-to-end testing a product, be picky about the UI you see and be obsessed with pixel perfection. If something clearly looks off, even if it is not directly related to what you are doing, try to get it fixed along the way.
 - Apply that same high standard to engineering excellence: lint, test failures, and test flakiness. If you see one, even if it is not caused by what you are working on right now, still get it fixed.
+
+## Source of truth: web first
+
+- `apps/web` is the source of truth for brand, UX copy, PWA icons/splash/loading, and feature behavior. Desktop and mobile match it, not the other way around.
+- When brand or shared UX changes in web, propagate to `apps/desktop` and `apps/mobile` in the same change: icons, splash/loading screens, wordmark (Newsreader italic + pen-star mark), and theme tokens (`#151916` bg, `#e3b66d` accent).
+- Never hand-draw icons. Regenerate install assets from the shared scripts: `scripts/generate-pwa-assets.mjs` (web), `scripts/generate-desktop-icons.mjs` (Tauri), `scripts/generate-mobile-assets.mjs` (Expo).
+- Desktop: `npm run build` in `apps/desktop` produces the frontend `dist/` bundle. Native installers need a Rust toolchain (`npm run tauri build`); without one, only `dist/` can be verified.
+- Mobile: export with `npx expo export --platform android --platform ios` in `apps/mobile` (web is covered by `apps/web`, so the Expo web platform is intentionally skipped). Keep `apps/mobile/index.js` as the local entry point (the hoisted `expo/AppEntry` resolves `../../App` outside the project in this monorepo). Only list config plugins in `app.json` that actually ship one, and keep `expo-asset` as an explicit dependency (Metro config requires it and it is not reliably hoisted).
+- Release artifacts (desktop installers, mobile builds) are published on GitHub Releases - the website download section links there.
 
 ## Test account (E2E / manual checks - isolated from personal data by user_id)
 
