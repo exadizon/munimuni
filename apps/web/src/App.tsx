@@ -160,6 +160,13 @@ function JournalApp({ userId }: { userId: string }) {
   const syncTimer = useRef<number | undefined>(undefined);
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const monthReflectionRef = useRef<HTMLTextAreaElement | null>(null);
+  const yearReflectionRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const activeEditorRef = useCallback(() => {
+    if (editorMode === 'month-reflection') return monthReflectionRef.current;
+    if (editorMode === 'year-reflection') return yearReflectionRef.current;
+    return editorRef.current;
+  }, [editorMode]);
 
   const entryForDate = entries.find((entry) => entry.date === selectedDate && !entry.deletedAt);
   const currentMonthKey = toMonthKey(month);
@@ -253,7 +260,7 @@ function JournalApp({ userId }: { userId: string }) {
   // Keep year reflection content in sync when year changes or reflections update from sync
   useEffect(() => {
     const recap = yearReflections.find((r) => r.year === currentYearKey);
-    if (document.activeElement !== monthReflectionRef.current) {
+    if (document.activeElement !== yearReflectionRef.current) {
       setYearReflectionContent(recap?.content ?? '');
     }
   }, [currentYearKey, yearReflections]);
@@ -330,42 +337,45 @@ function JournalApp({ userId }: { userId: string }) {
     saveSetting('size', writingSize);
   }, [appearance, accent, writingFont, writingSize]);
 
-  // Auto-grow editor but keep scrollable for mobile keyboard
+  // Only autofocus on devices with a fine pointer (desktop). On touch devices
+  // autofocus opens the keyboard on load and yanks the viewport to the top.
   useEffect(() => {
-    if (!editorRef.current) return;
-    const el = editorRef.current;
-    // Reset to auto to measure scrollHeight correctly, but cap at content height
-    // With overflow: auto, this allows browser to keep caret visible when keyboard opens
+    if (typeof window === 'undefined') return;
+    if (!window.matchMedia('(pointer: fine)').matches) return;
+    activeEditorRef()?.focus({ preventScroll: true });
+    // Run once on mount; mode changes are user-initiated and keep focus naturally.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const autoGrow = useCallback((el: HTMLTextAreaElement | null) => {
+    if (!el) return;
+    // Mobile (same breakpoint as the CSS): the editor is a stable internal
+    // scroller, so never touch its height there - per-keystroke resizing is
+    // what made typing jump. Matched on width, not pointer, so it stays in
+    // sync with the layout including touch-laptops and narrow windows.
+    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 720px)').matches) {
+      el.style.height = '';
+      return;
+    }
+    // Reset to auto to measure scrollHeight correctly, then pin the height.
     el.style.height = 'auto';
     const nextHeight = Math.max(el.scrollHeight, window.innerHeight * 0.45);
     el.style.height = `${nextHeight}px`;
-  }, [content]);
-
-  // Keep caret visible when virtual keyboard resizes viewport (mobile) - throttled, only when keyboard likely open
-  useEffect(() => {
-    const viewport = window.visualViewport;
-    if (!viewport) return;
-    let rafId: number | null = null;
-    const handleResize = () => {
-      if (rafId !== null) return;
-      rafId = window.requestAnimationFrame(() => {
-        rafId = null;
-        if (document.activeElement !== editorRef.current || !editorRef.current) return;
-        // Only act when viewport shrank significantly (keyboard open), not on alt-tab restore
-        const keyboardHeight = window.innerHeight - viewport.height;
-        if (keyboardHeight < 120) return;
-        // Ensure caret is visible without forcing scroll when not needed
-        try {
-          editorRef.current.scrollIntoView({ block: 'nearest' });
-        } catch {}
-      });
-    };
-    viewport.addEventListener('resize', handleResize);
-    return () => {
-      if (rafId !== null) window.cancelAnimationFrame(rafId);
-      viewport.removeEventListener('resize', handleResize);
-    };
   }, []);
+
+  // Auto-grow all editors so the page scrolls instead of trapping text inside
+  // a fixed nested scroller where the keyboard can cover it.
+  useEffect(() => {
+    autoGrow(editorRef.current);
+  }, [content, autoGrow, writingFont, writingSize, editorMode]);
+
+  useEffect(() => {
+    autoGrow(monthReflectionRef.current);
+  }, [monthReflectionContent, autoGrow, writingFont, writingSize, editorMode]);
+
+  useEffect(() => {
+    autoGrow(yearReflectionRef.current);
+  }, [yearReflectionContent, autoGrow, writingFont, writingSize, editorMode]);
 
   // Close user menu on outside click
   useEffect(() => {
@@ -378,15 +388,6 @@ function JournalApp({ userId }: { userId: string }) {
     document.addEventListener('mousedown', handleClick);
     return () => document.removeEventListener('mousedown', handleClick);
   }, [userMenuOpen]);
-
-  // Auto-grow month reflection textarea (full editor mode)
-  useEffect(() => {
-    if (!monthReflectionRef.current) return;
-    const el = monthReflectionRef.current;
-    el.style.height = 'auto';
-    const nextHeight = Math.max(el.scrollHeight, window.innerHeight * 0.45);
-    el.style.height = `${nextHeight}px`;
-  }, [monthReflectionContent, editorMode]);
 
   const calendarDays = useMemo(() => {
     const firstDay = new Date(month.getFullYear(), month.getMonth(), 1).getDay();
@@ -712,7 +713,6 @@ function JournalApp({ userId }: { userId: string }) {
                   placeholder="Begin wherever you are…"
                   aria-label={`Journal entry for ${formatLongDate(selectedDate)}`}
                   spellCheck="true"
-                  autoFocus
                 />
                 <div className="paper-footer"><span>{countWords(content)} {countWords(content) === 1 ? 'word' : 'words'}</span><span>{entryForDate ? 'Private to you' : 'A blank page'}</span></div>
               </div>
@@ -752,7 +752,6 @@ function JournalApp({ userId }: { userId: string }) {
                   placeholder={`What shaped ${formatMonth(month)}?`}
                   aria-label={`Monthly reflection for ${formatMonth(month)}`}
                   spellCheck="true"
-                  autoFocus
                 />
                 <div className="paper-footer"><span>{countWords(monthReflectionContent)} {countWords(monthReflectionContent) === 1 ? 'word' : 'words'}</span><span>Private to you</span></div>
               </div>
@@ -789,14 +788,13 @@ function JournalApp({ userId }: { userId: string }) {
                   </div>
                 </div>
                 <textarea
-                  ref={monthReflectionRef}
+                  ref={yearReflectionRef}
                   className="editor"
                   value={yearReflectionContent}
                   onChange={(event) => setYearReflectionContent(event.target.value)}
                   placeholder={`What defined ${new Date().getFullYear()}?`}
                   aria-label={`Yearly reflection for ${new Date().getFullYear()}`}
                   spellCheck="true"
-                  autoFocus
                 />
                 <div className="paper-footer"><span>{countWords(yearReflectionContent)} {countWords(yearReflectionContent) === 1 ? 'word' : 'words'}</span><span>Private to you</span></div>
               </div>
